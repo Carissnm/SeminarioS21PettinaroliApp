@@ -1,0 +1,19 @@
+.title {
+  -fx-font-size: 16px;
+  -fx-font-weight: bold;
+}
+
+.sidebar {
+  -fx-background-color: #f7f7fb;
+  -fx-border-color: #e5e5ef;
+  -fx-border-width: 0 1 0 0;
+}
+
+.sidebar .button {
+  -fx-font-size: 14px;
+  -fx-padding: 10 14 10 14;
+}
+
+.stack-pane {
+  -fx-padding: 16;
+}

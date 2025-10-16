@@ -1,17 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.MainController">
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.MainController"
+            stylesheets="@styles.css">
+
+    <!-- Barra superior -->
     <top>
         <ToolBar>
-            <Label text="Menú Principal" />
+            <Label text="Sistema de Gestión - Club Social Potencia" styleClass="title"/>
             <Pane HBox.hgrow="ALWAYS"/>
-            <Button text="Salir" onAction="#onSalir"/>
+            <Button text="Salir" onAction="#onSalir" />
         </ToolBar>
     </top>
+
+    <!-- Menú lateral -->
+    <left>
+        <VBox spacing="10" styleClass="sidebar">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Button text="Socios"        maxWidth="Infinity" onAction="#onSocios"/>
+            <Button text="🏃 Actividades"    maxWidth="Infinity" onAction="#onActividades"/>
+            <Button text="💳 Pagos"          maxWidth="Infinity" onAction="#onPagos"/>
+            <Button text="📈 Reportes"       maxWidth="Infinity" onAction="#onReportes"/>
+            <Separator/>
+            <Button text="Configuración" maxWidth="Infinity" onAction="#onConfig"/>
+        </VBox>
+    </left>
+
+    <!-- Área central -->
     <center>
-        <StackPane>
-            <Label text="Menú Principal" />
+        <StackPane fx:id="centerPane">
+
         </StackPane>
     </center>
+
 </BorderPane>
