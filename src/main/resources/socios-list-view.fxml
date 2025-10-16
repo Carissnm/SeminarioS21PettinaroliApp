@@ -1,17 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.cell.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1">
-    <top>
-        <Label text="Socios" style="-fx-font-size:18px; -fx-font-weight:bold;"/>
-    </top>
-    <center>
-        <StackPane>
-            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
-            <Label text="(Acá va el CRUD de socios)"/>
-        </StackPane>
-    </center>
-</BorderPane>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SociosListController"
+      spacing="10">
+    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+    <!-- Barra de búsqueda -->
+    <HBox spacing="8">
+        <TextField fx:id="txtBuscarDni" promptText="Buscar por DNI (prefijo)"
+                   HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnBuscar" text="Buscar" onAction="#onBuscar" defaultButton="true"/>
+        <Button text="Refrescar"  onAction="#onRefrescar"/>
+    </HBox>
+
+    <!-- Tabla de socios -->
+    <TableView fx:id="tblSocios" VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="No hay socios para mostrar"/>
+        </placeholder>
+        <columns>
+            <TableColumn fx:id="colDni"      text="DNI"      prefWidth="120"/>
+            <TableColumn fx:id="colApellido" text="Apellido" prefWidth="160"/>
+            <TableColumn fx:id="colNombre"   text="Nombre"   prefWidth="160"/>
+            <TableColumn fx:id="colEmail"    text="Email"    prefWidth="220"/>
+            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
+            <!-- En el controller la mapeamos a String (Activo/Inactivo) -->
+            <TableColumn fx:id="colActivo"   text="Estado"   prefWidth="90"/>
+        </columns>
+    </TableView>
+
+    <!-- Acciones -->
+    <HBox spacing="8">
+        <Button fx:id="btnNuevo"   text="Nuevo"    onAction="#onNuevo"/>
+        <Button fx:id="btnEditar"  text="Editar"   onAction="#onEditar"/>
+        <Button fx:id="btnEliminar" text="Eliminar" onAction="#onEliminar"/>
+    </HBox>
+</VBox>
