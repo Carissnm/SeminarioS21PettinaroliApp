@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.ActividadesListController"
+      spacing="10">
+    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+    <HBox spacing="8">
+        <TextField fx:id="txtBuscar" promptText="Buscar por nombre (prefijo)" HBox.hgrow="ALWAYS"/>
+        <Button text="Buscar" onAction="#onBuscar" defaultButton="true"/>
+        <Button text="Refrescar" onAction="#onRefrescar"/>
+    </HBox>
+
+    <TableView fx:id="tbl" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colNombre" text="Nombre" prefWidth="220"/>
+            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="300"/>
+            <TableColumn fx:id="colPrecio" text="Precio actual" prefWidth="120"/>
+            <TableColumn fx:id="colEstado" text="Estado" prefWidth="100"/>
+        </columns>
+        <placeholder><Label text="No hay actividades"/></placeholder>
+    </TableView>
+
+    <HBox spacing="8">
+        <Button text="Nuevo" onAction="#onNuevo"/>
+        <Button text="Editar" onAction="#onEditar"/>
+        <Button text="Activar/Inactivar" onAction="#onToggleEstado"/>
+        <Button text="Eliminar" onAction="#onEliminar"/>
+    </HBox>
+</VBox>

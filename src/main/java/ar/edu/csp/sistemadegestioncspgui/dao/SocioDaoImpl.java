@@ -5,6 +5,7 @@ import ar.edu.csp.sistemadegestioncspgui.model.EstadoSocio;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -15,16 +16,24 @@ public class SocioDaoImpl implements SocioDao {
 
     private final DataSource ds = DataSourceFactory.get();
 
-    // --- SQL base ---
+    // --- BASE SQL ---
     private static final String SELECT_BASE = """
-        SELECT id, dni, nombre, apellido, fecha_nac, domicilio, email,
-               telefono, estado, fecha_alta, fecha_baja
-          FROM socio
-        """;
+    SELECT 
+        s.id, s.dni, s.nombre, s.apellido, s.fecha_nac, s.domicilio, s.email,
+        s.telefono, s.estado, s.fecha_alta, s.fecha_baja,
+        (
+          SELECT COALESCE(SUM(m.importe), 0)
+          FROM cuenta c
+          LEFT JOIN movimiento_cuenta m ON m.cuenta_id = c.id
+          WHERE c.socio_id = s.id
+        ) AS saldo
+    FROM socio s
+    """;
 
-    private static final String SELECT_ALL            = SELECT_BASE + " ORDER BY apellido, nombre";
-    private static final String SELECT_BY_ID          = SELECT_BASE + " WHERE id = ?";
-    private static final String SELECT_BY_DNI_PREFIX  = SELECT_BASE + " WHERE dni LIKE ? ORDER BY apellido, nombre";
+    private static final String SELECT_ALL           = SELECT_BASE + " ORDER BY s.apellido, s.nombre";
+    private static final String SELECT_BY_ID         = SELECT_BASE + " WHERE s.id = ?";
+    private static final String SELECT_BY_DNI_PREFIX = SELECT_BASE + " WHERE s.dni LIKE ? ORDER BY s.apellido, s.nombre";
+
 
     // INSERT omite estado/fecha_alta para usar defaults de la BD
     private static final String INSERT_SQL = """
@@ -38,6 +47,31 @@ public class SocioDaoImpl implements SocioDao {
                estado = ?, fecha_baja = ?
          WHERE id = ?
         """;
+
+    private static final String SQL_SALDO_SOCIO = """
+    SELECT COALESCE(SUM(m.importe), 0) AS saldo
+    FROM cuenta c
+    LEFT JOIN movimiento_cuenta m ON m.cuenta_id = c.id
+    WHERE c.socio_id = ?
+    """;
+
+    private static final String SQL_BAJA_LOGICA_SOCIO = """
+    UPDATE socio
+       SET estado = 'INACTIVO',
+           fecha_baja = CURRENT_DATE
+     WHERE id = ?
+    """;
+
+    private static final String SQL_BAJA_INSCRIPCIONES_ACTIVAS = """
+    UPDATE inscripcion
+       SET estado = 'BAJA',
+           fecha_baja = CURRENT_DATE
+     WHERE socio_id = ?
+       AND estado = 'ACTIVA'
+       AND fecha_baja IS NULL
+    """;
+
+
 
     private static LocalDate toLocal(Date d) { return d == null ? null : d.toLocalDate(); }
     private static Date toDate(LocalDate d)  { return d == null ? null : Date.valueOf(d); }
@@ -65,6 +99,7 @@ public class SocioDaoImpl implements SocioDao {
         s.setEstado(EstadoSocio.fromDb(rs.getString("estado")));
         s.setFechaAlta(toLocal(rs.getDate("fecha_alta")));
         s.setFechaBaja(toLocal(rs.getDate("fecha_baja")));
+        s.setSaldo(rs.getBigDecimal("saldo"));
         return s;
     }
 
@@ -138,13 +173,6 @@ public class SocioDaoImpl implements SocioDao {
                 }
             }
         }
-
-        /* Si preferís setear estado/fecha_alta manualmente, reemplazá por:
-        String sql = "INSERT INTO socio (dni,nombre,apellido,fecha_nac,domicilio,email,telefono,estado,fecha_alta,fecha_baja) VALUES (?,?,?,?,?,?,?,?,?,?)";
-        ps.setString(8, (s.getEstado() == null ? EstadoSocio.ACTIVO : s.getEstado()).toDb());
-        ps.setDate(9, toDate(s.getFechaAlta() != null ? s.getFechaAlta() : LocalDate.now()));
-        ps.setDate(10, toDate(s.getFechaBaja()));
-        */
     }
 
     @Override
@@ -173,12 +201,48 @@ public class SocioDaoImpl implements SocioDao {
 
     @Override
     public boolean eliminar(long id) throws SQLException {
-        try (Connection cn = ds.getConnection();
-             PreparedStatement ps = cn.prepareStatement("DELETE FROM socio WHERE id = ?")) {
-            ps.setLong(1, id);
-            return ps.executeUpdate() > 0;
+        try (Connection cn = ds.getConnection()) {
+            cn.setAutoCommit(false);
+            try {
+                // 1) Regla de negocio: si tiene deuda -> no permitir
+                BigDecimal saldo = calcularSaldo(cn, id);
+                if (saldo.compareTo(BigDecimal.ZERO) < 0) {
+                    cn.rollback();
+                    throw new SQLException("El socio tiene deuda pendiente (saldo: " + saldo + "). No se puede dar de baja.");
+                }
+
+                // 2) Dar de baja inscripciones ACTIVAS (para que no se siga cobrando)
+                try (PreparedStatement ps = cn.prepareStatement(SQL_BAJA_INSCRIPCIONES_ACTIVAS)) {
+                    ps.setLong(1, id);
+                    ps.executeUpdate();
+                }
+
+                // 3) Baja lógica del socio (no borrar por FKs: aptos, etc.)
+                int updated;
+                try (PreparedStatement ps = cn.prepareStatement(SQL_BAJA_LOGICA_SOCIO)) {
+                    ps.setLong(1, id);
+                    updated = ps.executeUpdate();
+                }
+
+                cn.commit();
+                return updated > 0;
+
+            } catch (SQLException ex) {
+                cn.rollback();
+                throw ex;
+            } finally {
+                cn.setAutoCommit(true);
+            }
         }
-        // Si hay FKs, preferí baja lógica:
-        // UPDATE socio SET estado='INACTIVO', fecha_baja = CURRENT_DATE WHERE id=?
+    }
+
+    private BigDecimal calcularSaldo(Connection cn, long socioId) throws SQLException {
+        try (PreparedStatement ps = cn.prepareStatement(SQL_SALDO_SOCIO)) {
+            ps.setLong(1, socioId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getBigDecimal("saldo");
+                return BigDecimal.ZERO;
+            }
+        }
     }
 }

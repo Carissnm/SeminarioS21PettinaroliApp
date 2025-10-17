@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public final class DataSourceFactory {
+
     private static HikariDataSource ds;
     private DataSourceFactory() {}
 

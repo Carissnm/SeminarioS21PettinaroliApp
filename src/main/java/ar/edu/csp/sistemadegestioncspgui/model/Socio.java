@@ -1,5 +1,6 @@
 package ar.edu.csp.sistemadegestioncspgui.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -15,6 +16,7 @@ public class Socio {
     private EstadoSocio estado = EstadoSocio.ACTIVO; // default seguro
     private LocalDate fechaAlta;
     private LocalDate fechaBaja;
+    private BigDecimal saldo; // <<-- transitorio, solo para mostrar en UI
 
     // --- Constructores ---
     public Socio() {}
@@ -77,16 +79,35 @@ public class Socio {
     public LocalDate getFechaBaja() { return fechaBaja; }
     public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
 
+    public BigDecimal getSaldo() {
+        return saldo;
+    }
+
+    public void setSaldo(BigDecimal saldo) {
+        this.saldo = saldo;
+    }
+
     // --- Helpers de compatibilidad/UX ---
     public boolean isActivo() { return estado == EstadoSocio.ACTIVO; }
     public void setActivo(boolean activo) { this.estado = activo ? EstadoSocio.ACTIVO : EstadoSocio.INACTIVO; }
-    public String getNombreCompleto() { return (apellido == null ? "" : apellido) + ", " + (nombre == null ? "" : nombre); }
+
+
+    public String getNombreCompleto() {
+        String ap = (apellido == null ? "" : apellido.trim());
+        String no = (nombre == null   ? "" : nombre.trim());
+        if (ap.isEmpty()) return no;
+        if (no.isEmpty()) return ap;
+        return ap + ", " + no;
+    }
 
     @Override
     public String toString() {
         return String.format("Socio{id=%s, dni=%s, nombre=%s, apellido=%s, estado=%s}",
                 id, dni, nombre, apellido, estado);
     }
+
+
+
 
     // Opcional: identidad por id si existe; si no, por dni.
     @Override

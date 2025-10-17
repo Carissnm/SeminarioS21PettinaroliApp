@@ -13,6 +13,7 @@
     <HBox spacing="8">
         <TextField fx:id="txtBuscarDni" promptText="Buscar por DNI (prefijo)"
                    HBox.hgrow="ALWAYS"/>
+        <Button text="Abrir" onAction="#onAbrir"/>
         <Button fx:id="btnBuscar" text="Buscar" onAction="#onBuscar" defaultButton="true"/>
         <Button text="Refrescar"  onAction="#onRefrescar"/>
     </HBox>
@@ -30,6 +31,7 @@
             <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
             <!-- En el controller la mapeamos a String (Activo/Inactivo) -->
             <TableColumn fx:id="colActivo"   text="Estado"   prefWidth="90"/>
+            <TableColumn fx:id="colSaldo" text="Saldo" prefWidth="110"/>
         </columns>
     </TableView>
 

@@ -7,15 +7,12 @@ module ar.edu.csp.sistemadegestioncspgui {
     requires java.sql;
     requires com.zaxxer.hikari;
 
-    // BCrypt
+    // BCrypt (si te da error este nombre, probá: requires org.mindrot.jbcrypt;)
     requires jbcrypt;
 
-    // 1) Exporta el paquete donde está la clase Application
-    exports ar.edu.csp.sistemadegestioncspgui to javafx.graphics;
+    // Exportá el paquete donde está tu Application (SistemaDeGestionCSPgui)
+    exports ar.edu.csp.sistemadegestioncspgui;
 
-    // 2) Abre los paquetes que cargan FXML (reflexión de FXMLLoader)
+    // Abrí solo los controllers para FXML (reflexión del FXMLLoader)
     opens ar.edu.csp.sistemadegestioncspgui.ui to javafx.fxml;
-
-    // 3) (opcional) si usás bindings de propiedades en tablas
-    opens ar.edu.csp.sistemadegestioncspgui.model to javafx.base;
 }

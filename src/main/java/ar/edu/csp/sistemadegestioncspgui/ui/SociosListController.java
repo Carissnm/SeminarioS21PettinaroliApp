@@ -8,8 +8,13 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,7 +23,7 @@ import java.util.Optional;
 public class SociosListController {
 
     @FXML private TableView<Socio> tblSocios;
-    @FXML private TableColumn<Socio, String>  colDni, colApellido, colNombre, colEmail, colTelefono, colActivo; // <- colActivo ahora es String
+    @FXML private TableColumn<Socio, String>  colDni, colApellido, colNombre, colEmail, colTelefono, colActivo, colSaldo; // <- colActivo ahora es String
     @FXML private TextField txtBuscarDni;
     @FXML private Button btnBuscar, btnNuevo, btnEditar, btnEliminar;
 
@@ -33,10 +38,26 @@ public class SociosListController {
         colNombre.setCellValueFactory(c -> new SimpleStringProperty(nz(c.getValue().getNombre())));
         colEmail.setCellValueFactory(c -> new SimpleStringProperty(nz(c.getValue().getEmail())));
         colTelefono.setCellValueFactory(c -> new SimpleStringProperty(nz(c.getValue().getTelefono())));
+        colSaldo.setCellValueFactory(c ->
+                new javafx.beans.property.SimpleStringProperty(formatMoney(c.getValue().getSaldo()))
+        );
+
+        colSaldo.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                // rojo si negativo, verde si >= 0
+                boolean negativo = item.contains("-");
+                setStyle("-fx-font-weight: bold; -fx-text-fill: " + (negativo ? "crimson" : "seagreen") + ";");
+            }
+        });
+
         colActivo.setCellValueFactory(c -> {
             EstadoSocio est = c.getValue().getEstado();
             String label = (est == null || est == EstadoSocio.ACTIVO) ? "Activo" : "Inactivo";
             return new SimpleStringProperty(label);
+
         });
 
         // (Opcional) pinta verde/rojo Activo/Inactivo
@@ -63,6 +84,12 @@ public class SociosListController {
         });
 
         refrescar();
+    }
+
+    private String formatMoney(java.math.BigDecimal v) {
+        if (v == null) return "$ 0,00";
+        java.text.NumberFormat nf = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR"));
+        return nf.format(v);
     }
 
     private static String nz(String s) { return s == null ? "" : s; }
@@ -126,6 +153,32 @@ public class SociosListController {
         // Socio res = SocioForm.showDialog(sel);
         // if (res != null) { dao.actualizar(res); refrescar(); }
     }
+
+    @FXML
+    private void onAbrir() {
+        var sel = tblSocios.getSelectionModel().getSelectedItem();
+        if (sel == null) { info("Seleccioná un socio"); return; }
+
+        try {
+            var loader = new FXMLLoader(getClass().getResource("/socio-detalle-view.fxml"));
+            Parent root = loader.load();
+
+            var ctl = (SocioDetalleController) loader.getController();
+            ctl.setSocio(sel); // adentro también podés usar getNombreCompleto()
+
+            Stage st = new Stage();
+            st.setTitle("Socio • " + sel.getNombreCompleto()); // <--- acá
+            st.setScene(new Scene(root, 820, 560));
+            st.initOwner(tblSocios.getScene().getWindow());
+            st.initModality(Modality.WINDOW_MODAL);
+            st.showAndWait();
+
+            refrescar();
+        } catch (Exception e) { error("No se pudo abrir el perfil del socio", e); }
+    }
+
+
+
 
     @FXML
     private void onEliminar() {

@@ -6,7 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-
+// Para loguearse utilizar las siguientes credenciales: Usuario: admin@csp.local, Contraseña: admin123
 public class LoginController {
 
     @FXML private TextField txtEmail;
