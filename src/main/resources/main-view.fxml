@@ -2,6 +2,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.MainController"
@@ -9,13 +10,23 @@
 
     <!-- Barra superior -->
     <top>
-        <ToolBar>
-            <Label fx:id="lblTitle"
-                   text="Sistema de Gestión - Club Social Potencia"
-                   styleClass="title"/>
-            <Pane HBox.hgrow="ALWAYS"/>
-            <Button text="Salir" onAction="#onSalir" />
-        </ToolBar>
+        <VBox>
+            <!-- Título de la app -->
+            <ToolBar>
+                <Label fx:id="lblTitle"
+                       text="Sistema de Gestión - Club Social Potencia"
+                       styleClass="title"/>
+                <Pane HBox.hgrow="ALWAYS"/>
+                <Button text="Salir" onAction="#onSalir" />
+            </ToolBar>
+
+            <!-- Título de sección (lo maneja Navigation.setSectionTitle) -->
+            <HBox style="-fx-padding: 6 12;">
+                <Label fx:id="lblSectionTitle"
+                       text="Inicio"
+                       styleClass="section"/>
+            </HBox>
+        </VBox>
     </top>
 
     <!-- Menú lateral -->
@@ -25,7 +36,7 @@
                 <Insets top="15" right="15" bottom="15" left="15"/>
             </padding>
 
-            <Button text="Socios"            mnemonicParsing="true" maxWidth="Infinity" onAction="#onSocios">
+            <Button text="👤 _Socios"         mnemonicParsing="true" maxWidth="Infinity" onAction="#onSocios">
                 <tooltip><Tooltip text="ABM de socios"/></tooltip>
             </Button>
             <Button text="🏃 _Actividades"    mnemonicParsing="true" maxWidth="Infinity" onAction="#onActividades">
@@ -38,11 +49,11 @@
                 <tooltip><Tooltip text="Listados y balances"/></tooltip>
             </Button>
             <Separator/>
-            <Button text="Configuración"     mnemonicParsing="true" maxWidth="Infinity" onAction="#onConfig"/>
+            <Button text="⚙️ Configuración"  mnemonicParsing="true" maxWidth="Infinity" onAction="#onConfig"/>
         </VBox>
     </left>
 
-    <!-- Área central -->
+    <!-- Área central donde inyectamos vistas -->
     <center>
         <StackPane fx:id="centerPane" styleClass="center-pane">
             <Label text="Elegí una opción del menú para comenzar" styleClass="placeholder"/>

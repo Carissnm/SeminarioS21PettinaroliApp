@@ -3,6 +3,12 @@
   -fx-font-weight: bold;
 }
 
+.label.section {
+  -fx-font-size: 16px;
+  -fx-font-weight: bold;
+}
+
+
 .sidebar {
   -fx-background-color: #f7f7fb;
   -fx-border-color: #e5e5ef;

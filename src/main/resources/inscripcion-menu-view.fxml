@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.InscripcionFormController"
+            prefWidth="900" prefHeight="560">
+    <top>
+        <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
+            <Label text="Socios" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+            <!-- si preferís que diga "Inscripciones", cambialo -->
+        </HBox>
+    </top>
+
+    <center>
+        <GridPane hgap="12" vgap="10" style="-fx-padding: 18;">
+            <columnConstraints>
+                <ColumnConstraints minWidth="170"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <Label text="Socio:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <HBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                <TextField fx:id="txtSocio" promptText="Seleccioná socio" HBox.hgrow="ALWAYS" editable="false"/>
+                <Button text="Buscar..." onAction="#buscarSocio"/>
+            </HBox>
+
+            <Label text="Actividad:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <ComboBox fx:id="cmbActividad" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="320"/>
+
+            <Label text="Fecha alta:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <DatePicker fx:id="dpFechaAlta" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+            <Label text="Precio alta:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtPrecioAlta" GridPane.rowIndex="3" GridPane.columnIndex="1" promptText="ej: 12000.00"/>
+        </GridPane>
+    </center>
+
+    <bottom>
+        <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding: 12 18;">
+            <Button text="Guardar" onAction="#guardar"/>
+            <Button text="Cancelar" onAction="#cancelar"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.ActividadesMenuController"
+            prefWidth="900" prefHeight="560">
+    <top>
+        <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
+            <Label text="Actividades" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+        </HBox>
+    </top>
+    <center>
+        <VBox alignment="CENTER" spacing="12" style="-fx-padding: 24;">
+            <Button text="Alta de actividad"          onAction="#irAltaActividad"   prefWidth="280"/>
+            <Button text="Buscar / Listar actividades" onAction="#irListarActiv"    prefWidth="280"/>
+            <Button text="Volver"                     onAction="#volver"            prefWidth="280"/>
+        </VBox>
+    </center>
+</BorderPane>

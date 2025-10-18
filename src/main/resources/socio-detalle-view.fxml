@@ -2,62 +2,47 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SocioDetalleController">
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SocioDetalleController"
+            prefWidth="900" prefHeight="560">
     <top>
-        <HBox spacing="10" padding="10">
-            <Label fx:id="lblNombre" style="-fx-font-size:16; -fx-font-weight:bold;"/>
-            <Pane HBox.hgrow="ALWAYS"/>
-            <Label text="Saldo:"/>
-            <Label fx:id="lblSaldo" style="-fx-font-weight:bold;"/>
+        <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
+            <Label text="Socios" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
         </HBox>
     </top>
 
     <center>
-        <TabPane fx:id="tabPane">
-            <tabs>
-                <Tab text="Cuenta" closable="false">
-                    <VBox spacing="8" padding="10">
-                        <HBox spacing="8">
-                            <TextField fx:id="txtPagoImporte" promptText="Importe"/>
-                            <TextField fx:id="txtPagoConcepto" promptText="Concepto (opcional)"/>
-                            <Button text="Registrar pago" onAction="#onRegistrarPago"/>
-                        </HBox>
-                        <TableView fx:id="tblMovs" VBox.vgrow="ALWAYS">
-                            <columns>
-                                <TableColumn fx:id="colMovFecha" text="Fecha" prefWidth="110"/>
-                                <TableColumn fx:id="colMovConcepto" text="Concepto" prefWidth="260"/>
-                                <TableColumn fx:id="colMovImporte" text="Importe" prefWidth="120"/>
-                            </columns>
-                        </TableView>
-                    </VBox>
-                </Tab>
-                <Tab text="Inscripciones" closable="false">
-                    <VBox spacing="8" padding="10">
-                        <HBox spacing="8">
-                            <ComboBox fx:id="cbActividad" promptText="Actividad" prefWidth="260"/>
-                            <Button text="Inscribir" onAction="#onInscribir"/>
-                            <Button text="Dar de baja" onAction="#onBajaInscripcion"/>
-                        </HBox>
-                        <TableView fx:id="tblInscripciones" VBox.vgrow="ALWAYS">
-                            <columns>
-                                <TableColumn fx:id="colActNombre" text="Actividad" prefWidth="220"/>
-                                <TableColumn fx:id="colActCuota"  text="Cuota"     prefWidth="100"/>
-                                <TableColumn fx:id="colInsEstado" text="Estado"    prefWidth="100"/>
-                                <TableColumn fx:id="colInsAlta"   text="Alta"      prefWidth="110"/>
-                                <TableColumn fx:id="colInsBaja"   text="Baja"      prefWidth="110"/>
-                            </columns>
-                        </TableView>
-                    </VBox>
-                </Tab>
-                <Tab text="Datos" closable="false">
-                    <ScrollPane fitToWidth="true">
-                        <VBox spacing="6" padding="10">
-                            <Label fx:id="lblDatos"/>
-                        </VBox>
-                    </ScrollPane>
-                </Tab>
-            </tabs>
-        </TabPane>
+        <GridPane hgap="12" vgap="10" style="-fx-padding: 18;">
+            <columnConstraints>
+                <ColumnConstraints minWidth="150"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <Label text="ID:"                GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtId"         GridPane.rowIndex="0" GridPane.columnIndex="1" editable="false"/>
+
+            <Label text="Apellido:"          GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtApellido"   GridPane.rowIndex="1" GridPane.columnIndex="1" editable="false"/>
+
+            <Label text="Nombre:"            GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtNombre"     GridPane.rowIndex="2" GridPane.columnIndex="1" editable="false"/>
+
+            <Label text="Documento:"         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtDocumento"  GridPane.rowIndex="3" GridPane.columnIndex="1" editable="false"/>
+
+            <Label text="Estado:"            GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtEstado"     GridPane.rowIndex="4" GridPane.columnIndex="1" editable="false"/>
+        </GridPane>
     </center>
+
+    <bottom>
+        <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding: 12 18;">
+            <Button text="Editar"                onAction="#editar"/>
+            <Button text="Inscribir en actividad" onAction="#inscribir"/>
+            <Button text="Ver inscripciones"     onAction="#verInscripciones"/>
+            <Button text="Registrar pago"        onAction="#registrarPago"/>
+            <Button text="Volver"                onAction="#volver"/>
+        </HBox>
+    </bottom>
 </BorderPane>

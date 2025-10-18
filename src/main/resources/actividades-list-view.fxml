@@ -3,31 +3,40 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.ActividadesListController"
-      spacing="10">
-    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+<?xml version="1.0" encoding="UTF-8"?>
 
-    <HBox spacing="8">
-        <TextField fx:id="txtBuscar" promptText="Buscar por nombre (prefijo)" HBox.hgrow="ALWAYS"/>
-        <Button text="Buscar" onAction="#onBuscar" defaultButton="true"/>
-        <Button text="Refrescar" onAction="#onRefrescar"/>
-    </HBox>
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.ActividadesListController"
+            prefWidth="1000" prefHeight="620">
+    <top>
+        <VBox>
+            <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
+                <Label text="Actividades" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+            </HBox>
+            <HBox spacing="8" style="-fx-padding:10 18;">
+                <TextField fx:id="txtFiltro" promptText="Buscar por nombre o categoría" HBox.hgrow="ALWAYS"/>
+                <Button text="Buscar" onAction="#buscar"/>
+                <Button text="Nueva actividad" onAction="#nuevaActividad"/>
+                <Button text="Volver" onAction="#volver"/>
+            </HBox>
+        </VBox>
+    </top>
 
-    <TableView fx:id="tbl" VBox.vgrow="ALWAYS">
-        <columns>
-            <TableColumn fx:id="colNombre" text="Nombre" prefWidth="220"/>
-            <TableColumn fx:id="colDescripcion" text="Descripción" prefWidth="300"/>
-            <TableColumn fx:id="colPrecio" text="Precio actual" prefWidth="120"/>
-            <TableColumn fx:id="colEstado" text="Estado" prefWidth="100"/>
-        </columns>
-        <placeholder><Label text="No hay actividades"/></placeholder>
-    </TableView>
+    <center>
+        <TableView fx:id="tblActividades">
+            <columns>
+                <TableColumn fx:id="colId"       text="ID"        prefWidth="70"/>
+                <TableColumn fx:id="colNombre"   text="Nombre"    prefWidth="240"/>
+                <TableColumn fx:id="colPrecio"   text="Cuota ($)" prefWidth="120"/>
+                <TableColumn fx:id="colEstado"   text="Estado"    prefWidth="120"/>
+            </columns>
+        </TableView>
+    </center>
 
-    <HBox spacing="8">
-        <Button text="Nuevo" onAction="#onNuevo"/>
-        <Button text="Editar" onAction="#onEditar"/>
-        <Button text="Activar/Inactivar" onAction="#onToggleEstado"/>
-        <Button text="Eliminar" onAction="#onEliminar"/>
-    </HBox>
-</VBox>
+    <bottom>
+        <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding:10 18;">
+            <Button text="Ver detalle" onAction="#verDetalle"/>
+            <Button text="Editar" onAction="#editarSeleccionada"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,87 +1,126 @@
 package ar.edu.csp.sistemadegestioncspgui.dao;
 
+import ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory;
+import ar.edu.csp.sistemadegestioncspgui.model.EstadoInscripcion;
+
+import ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory;
 import ar.edu.csp.sistemadegestioncspgui.model.EstadoInscripcion;
 import ar.edu.csp.sistemadegestioncspgui.model.Inscripcion;
 
-// ar.edu.csp.sistemadegestioncspgui.dao.impl.InscripcionDaoImpl
+import javax.sql.DataSource;
+import java.math.BigDecimal;
+import java.sql.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 public class InscripcionDaoImpl implements InscripcionDao {
-    private final javax.sql.DataSource ds = ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory.get();
+    private final DataSource ds = DataSourceFactory.get();
     private final CuentaDao cuentaDao = new CuentaDaoImpl();
+    private final ActividadDao actDao  = new ActividadDaoImpl();
 
-    private static final String SQL_LIST = """
-        SELECT i.id, i.socio_id, i.actividad_id, i.estado, i.fecha_alta, i.fecha_baja,
-               a.nombre AS actividadNombre, a.cuota_mensual AS cuotaMensual
-        FROM inscripcion i
-        JOIN actividad a ON a.id = i.actividad_id
-        WHERE i.socio_id = ?
-        ORDER BY i.estado DESC, a.nombre
+    // Trae datos de inscripcion + nombre y precio_default de actividad (para tus campos de vista)
+    private static final String SEL_BASE = """
+        SELECT i.id, i.socio_id, i.actividad_id, i.precio_alta, i.estado,
+               i.fecha_alta, i.fecha_baja,
+               a.nombre AS actividad_nombre, a.precio_default AS actividad_precio
+          FROM inscripcion i
+          JOIN actividad a ON a.id = i.actividad_id
+        """;
+    private static final String SEL_POR_SOCIO = SEL_BASE + " WHERE i.socio_id=? ORDER BY i.fecha_alta DESC, i.id DESC";
+    private static final String SEL_ACTIVA    = SEL_BASE + " WHERE i.socio_id=? AND i.actividad_id=? AND (i.estado='ACTIVA' OR i.estado IS NULL) AND i.fecha_baja IS NULL";
+
+    private static final String INS_SQL = """
+        INSERT INTO inscripcion (socio_id, actividad_id, precio_alta, fecha_alta, estado)
+        VALUES (?, ?, ?, CURRENT_DATE, 'ACTIVA')
         """;
 
-    private static final String SQL_INSERT = """
-        INSERT INTO inscripcion (socio_id, actividad_id, estado, fecha_alta) 
-        VALUES (?, ?, 'ACTIVA', CURRENT_DATE)
+    private static final String BAJA_SQL = """
+        UPDATE inscripcion SET fecha_baja=?, estado='INACTIVA' WHERE id=?
         """;
 
-    private static final String SQL_BAJA = """
-        UPDATE inscripcion 
-           SET estado='BAJA', fecha_baja=CURRENT_DATE 
-         WHERE id=? AND estado='ACTIVA'
-        """;
+    private Inscripcion map(ResultSet rs) throws SQLException {
+        var i = new Inscripcion();
+        i.setId(rs.getLong("id"));
+        i.setSocioId(rs.getLong("socio_id"));
+        i.setActividadId(rs.getLong("actividad_id"));
+        i.setPrecioAlta(rs.getBigDecimal("precio_alta"));
+        i.setEstado(EstadoInscripcion.fromDb(rs.getString("estado")));
+        var fa = rs.getDate("fecha_alta");
+        var fb = rs.getDate("fecha_baja");
+        i.setFechaAlta(fa == null ? null : fa.toLocalDate());
+        i.setFechaBaja(fb == null ? null : fb.toLocalDate());
 
-    private static final String SQL_CUOTA = "SELECT cuota_mensual FROM actividad WHERE id=?";
+        // Campos de vista que pediste:
+        i.setActividadNombre(rs.getString("actividad_nombre"));
+        i.setCuotaMensual(rs.getBigDecimal("actividad_precio"));
 
-    @Override public java.util.List<Inscripcion> listarPorSocio(long socioId) throws Exception {
-        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SQL_LIST)) {
+        return i;
+    }
+
+    @Override
+    public List<Inscripcion> listarPorSocio(long socioId) throws Exception {
+        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SEL_POR_SOCIO)) {
             ps.setLong(1, socioId);
             try (var rs = ps.executeQuery()) {
-                var out = new java.util.ArrayList<Inscripcion>();
-                while (rs.next()) {
-                    var i = new Inscripcion();
-                    i.setId(rs.getLong("id"));
-                    i.setSocioId(rs.getLong("socio_id"));
-                    i.setActividadId(rs.getLong("actividad_id"));
-                    var est = rs.getString("estado");
-                    i.setEstado(est==null? EstadoInscripcion.ACTIVA:EstadoInscripcion.valueOf(est));
-                    var fa = rs.getDate("fecha_alta");  i.setFechaAlta(fa==null?null:fa.toLocalDate());
-                    var fb = rs.getDate("fecha_baja");  i.setFechaBaja(fb==null?null:fb.toLocalDate());
-                    i.setActividadNombre(rs.getString("actividadNombre"));
-                    i.setCuotaMensual(rs.getBigDecimal("cuotaMensual"));
-                    out.add(i);
-                }
+                List<Inscripcion> out = new ArrayList<>();
+                while (rs.next()) out.add(map(rs));
                 return out;
             }
         }
     }
 
-    @Override public long inscribir(long socioId, long actividadId) throws Exception {
-        try (var cn = ds.getConnection()) {
-            cn.setAutoCommit(false);
-            long newId;
-            // 1) crear inscripción
-            try (var ps = cn.prepareStatement(SQL_INSERT, java.sql.Statement.RETURN_GENERATED_KEYS)) {
-                ps.setLong(1, socioId);
-                ps.setLong(2, actividadId);
-                ps.executeUpdate();
-                try (var keys = ps.getGeneratedKeys()) { keys.next(); newId = keys.getLong(1); }
+    @Override
+    public Optional<Inscripcion> buscarActiva(long socioId, long actividadId) throws Exception {
+        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SEL_ACTIVA)) {
+            ps.setLong(1, socioId);
+            ps.setLong(2, actividadId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(map(rs)) : Optional.empty();
             }
-            // 2) generar cargo de la cuota vigente
-            java.math.BigDecimal cuota = java.math.BigDecimal.ZERO;
-            try (var ps = cn.prepareStatement(SQL_CUOTA)) {
-                ps.setLong(1, actividadId);
-                try (var rs = ps.executeQuery()) { if (rs.next()) cuota = rs.getBigDecimal(1); }
-            }
-            cn.commit(); cn.setAutoCommit(true);
-
-            if (cuota != null && cuota.signum() > 0) {
-                new CuentaDaoImpl().registrarCargo(socioId, cuota, "Inscripción a actividad ID " + actividadId);
-            }
-            return newId;
         }
     }
 
-    @Override public boolean baja(long inscripcionId) throws Exception {
-        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SQL_BAJA)) {
-            ps.setLong(1, inscripcionId);
+    @Override
+    public long inscribir(long socioId, long actividadId, BigDecimal precioUsado, String observacion) throws Exception {
+        if (precioUsado == null || precioUsado.signum() <= 0) throw new IllegalArgumentException("Precio inválido");
+        if (buscarActiva(socioId, actividadId).isPresent()) throw new IllegalStateException("El socio ya está inscripto en esta actividad");
+
+        long inscId;
+        try (var cn = ds.getConnection()) {
+            cn.setAutoCommit(false);
+
+            try (var ps = cn.prepareStatement(INS_SQL, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setLong(1, socioId);
+                ps.setLong(2, actividadId);
+                ps.setBigDecimal(3, precioUsado);
+                ps.executeUpdate();
+                try (var keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) inscId = keys.getLong(1);
+                    else throw new SQLException("No se generó ID de inscripción");
+                }
+            }
+
+            cn.commit();
+            cn.setAutoCommit(true);
+        }
+
+        // Cargo en cuenta (negativo) vinculado a la inscripción
+        var act = actDao.buscarPorId(actividadId).orElseThrow(() -> new IllegalArgumentException("Actividad inexistente"));
+        String desc = (observacion == null || observacion.isBlank())
+                ? "Inscripción a " + act.getNombre()
+                : observacion;
+        cuentaDao.registrarCargoActividad(socioId, precioUsado, inscId, desc);
+
+        return inscId;
+    }
+
+    @Override
+    public boolean darDeBaja(long inscripcionId, LocalDate fechaBaja) throws Exception {
+        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(BAJA_SQL)) {
+            ps.setDate(1, java.sql.Date.valueOf(fechaBaja == null ? LocalDate.now() : fechaBaja));
+            ps.setLong(2, inscripcionId);
             return ps.executeUpdate() > 0;
         }
     }

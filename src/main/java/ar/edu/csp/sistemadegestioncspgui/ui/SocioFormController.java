@@ -94,10 +94,13 @@ public class SocioFormController {
         socio.setActivo(chkActivo.isSelected()); // <-- enum via helper
 
         ok = true;
-        close();
+        Navigation.backOr("/socios-menu-view.fxml", "Socios");
     }
 
-    @FXML private void onCancelar() { ok = false; close(); }
+    @FXML private void onCancelar() {
+        ok = false;
+        Navigation.backOr("/socios-menu-view.fxml", "Socios");;
+    }
 
     private void warn(String msg) { new Alert(Alert.AlertType.WARNING, msg).showAndWait(); }
     private void close() { ((Stage) txtDni.getScene().getWindow()).close(); }

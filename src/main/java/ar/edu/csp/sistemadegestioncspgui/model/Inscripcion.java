@@ -7,6 +7,7 @@ public class Inscripcion {
     private Long id;
     private Long socioId;
     private Long actividadId;
+    private BigDecimal precioAlta;
     private EstadoInscripcion estado;
     private LocalDate fechaAlta, fechaBaja;
 
@@ -49,6 +50,14 @@ public class Inscripcion {
 
     public void setActividadId(Long actividadId) {
         this.actividadId = actividadId;
+    }
+
+    public BigDecimal getPrecioAlta() {
+        return precioAlta;
+    }
+
+    public void setPrecioAlta(BigDecimal precioAlta) {
+        this.precioAlta = precioAlta;
     }
 
     public EstadoInscripcion getEstado() {
