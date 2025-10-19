@@ -12,7 +12,8 @@
     <center>
         <VBox spacing="12" alignment="CENTER" style="-fx-padding: 24;">
             <Button text="Alta de socio"           onAction="#irAltaSocio"        prefWidth="260"/>
-            <Button text="Buscar / Listar socios"  onAction="#irListarSocios"      prefWidth="260"/>
+            <Button text="Listar socios"    onAction="#irListarSocios"  prefWidth="260"/>
+            <Button text="Buscar socio"     onAction="#irBuscarSocio"   prefWidth="260"/>
             <Button text="Inscripciones de socios" onAction="#irInscripciones"     prefWidth="260"/>
             <Button text="Volver"                  onAction="#volver"              prefWidth="260"/>
         </VBox>

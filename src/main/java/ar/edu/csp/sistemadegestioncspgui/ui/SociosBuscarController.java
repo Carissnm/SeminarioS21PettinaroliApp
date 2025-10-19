@@ -14,9 +14,8 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
-public class SociosListController {
+public class SociosBuscarController {
 
-    // IDs EXACTOS del FXML de LISTAR
     @FXML private TextField txtBuscarDni;
     @FXML private TableView<Socio> tblSocios;
     @FXML private TableColumn<Socio, String> colDni, colApellido, colNombre, colEmail, colTelefono, colActivo, colSaldo;
@@ -28,7 +27,6 @@ public class SociosListController {
     public void initialize() {
         Navigation.setSectionTitle("Socios");
 
-        // Mapeo de columnas
         colDni.setCellValueFactory(c -> new SimpleStringProperty(ns(c.getValue().getDni())));
         colApellido.setCellValueFactory(c -> new SimpleStringProperty(ns(c.getValue().getApellido())));
         colNombre.setCellValueFactory(c -> new SimpleStringProperty(ns(c.getValue().getNombre())));
@@ -39,70 +37,48 @@ public class SociosListController {
         colSaldo.setCellValueFactory(c -> new SimpleStringProperty(fmtMoney(c.getValue().getSaldo())));
 
         tblSocios.setItems(data);
-
-        // LISTA COMPLETA AL ENTRAR
-        onRefrescar();
+        // NO cargamos nada al entrar (arranca vacía)
     }
 
     // ----- Acciones -----
-    @FXML private void onRefrescar() {
+    @FXML
+    private void onBuscar() {
+        String prefijo = ns(txtBuscarDni.getText()).trim();
+        if (prefijo.isEmpty()) { info("Ingresá al menos 1 dígito de DNI."); data.clear(); return; }
         try {
-            List<Socio> todos = socioDao.listarTodos();
-            data.setAll(todos);
+            // tu DAO ya hace búsqueda parcial (LIKE 'prefijo%')
+            List<Socio> r = socioDao.buscarPorDni(prefijo);
+            data.setAll(r);
+            if (r.isEmpty()) info("No se encontraron socios para ese DNI.");
         } catch (Exception e) {
-            error("No se pudo listar los socios:\n" + e.getMessage());
+            error("No se pudo buscar:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    @FXML private void onBuscar() {
-        // En la pantalla de LISTAR, "Buscar" navega a la pantalla dedicada de búsqueda
-        Navigation.loadInMain("/socios-buscar-view.fxml", "Socios");
+    @FXML private void onLimpiar() { txtBuscarDni.clear(); data.clear(); }
+
+    @FXML
+    private void onVolver() {
+        Navigation.backOr("/socios-menu-view.fxml", "Socios");
     }
 
-    @FXML private void onAbrir() {
+    @FXML
+    private void onAbrir() {
         Socio s = tblSocios.getSelectionModel().getSelectedItem();
         if (s == null) { info("Seleccioná un socio para abrir."); return; }
         SelectionContext.setSocioActual(s);
         Navigation.loadInMain("/socio-detalle-view.fxml", "Socios");
     }
 
-    @FXML
-    private void onNuevo() {
-        SelectionContext.setSocioActual(null); // <-- importante
-        Navigation.loadInMain("/socio-form-view.fxml", "Socios");
-    }
+    @FXML private void onNuevo() { Navigation.loadInMain("/socio-form-view.fxml", "Socios"); }
 
-    @FXML private void onEditar() {
+    @FXML
+    private void onEditar() {
         Socio s = tblSocios.getSelectionModel().getSelectedItem();
         if (s == null) { info("Seleccioná un socio para editar."); return; }
         SelectionContext.setSocioActual(s);
         Navigation.loadInMain("/socio-form-view.fxml", "Socios");
-    }
-
-    @FXML private void onEliminar() {
-        Socio s = tblSocios.getSelectionModel().getSelectedItem();
-        if (s == null) { info("Seleccioná un socio para eliminar."); return; }
-        var conf = new Alert(Alert.AlertType.CONFIRMATION, "¿Eliminar al socio seleccionado?", ButtonType.YES, ButtonType.NO);
-        conf.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.YES) {
-                try {
-                    boolean ok = socioDao.eliminar(s.getId());
-                    if (ok) {
-                        data.remove(s);
-                    } else {
-                        info("No se pudo eliminar el socio.");
-                    }
-                } catch (Exception e) {
-                    error("No se pudo eliminar:\n" + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    @FXML private void onVolver() {
-        Navigation.backOr("/socios-menu-view.fxml", "Socios");
     }
 
     // ----- Helpers -----

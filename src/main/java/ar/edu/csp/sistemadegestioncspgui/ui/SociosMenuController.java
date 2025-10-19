@@ -11,13 +11,15 @@ public class SociosMenuController {
 
     @FXML
     private void irAltaSocio() {
+        SelectionContext.setSocioActual(null); // <-- importante
         Navigation.loadInMain("/socio-form-view.fxml", "Socios");
     }
-
     @FXML
     private void irListarSocios() {
         Navigation.loadInMain("/socios-list-view.fxml", "Socios");
     }
+
+    @FXML private void irBuscarSocio()  { Navigation.loadInMain("/socios-buscar-view.fxml", "Socios"); } // búsqueda
 
     @FXML
     private void irInscripciones() {

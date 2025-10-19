@@ -30,9 +30,9 @@ public class SocioDetalleController {
         txtEstado.setText(socio.getEstado() != null ? socio.getEstado().name() : "");
     }
 
-    @FXML private void editar() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("ui/SocioForm.fxml", "Socios"); }
-    @FXML private void inscribir() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("ui/InscripcionForm.fxml", "Socios"); }
-    @FXML private void verInscripciones() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("ui/InscripcionesList.fxml", "Socios"); }
+    @FXML private void editar() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("/socio-form-view.fxml", "Socios"); }
+    @FXML private void inscribir() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios"); }
+    @FXML private void verInscripciones() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios"); }
     @FXML private void registrarPago() { SelectionContext.setSocioActual(socio); Navigation.loadInMain("ui/PagoForm.fxml", "Socios"); }
     @FXML private void volver() { Navigation.back(); }
 

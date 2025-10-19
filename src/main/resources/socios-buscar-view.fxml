@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SociosBuscarController"
+      spacing="10">
+    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+
+    <!-- Barra de búsqueda -->
+    <HBox spacing="8">
+        <TextField fx:id="txtBuscarDni" promptText="DNI (prefijo)" HBox.hgrow="ALWAYS"/>
+        <Button text="Buscar"     onAction="#onBuscar"     defaultButton="true"/>
+        <Button text="Limpiar"    onAction="#onLimpiar"/>
+        <Button text="Volver"     onAction="#onVolver"/>
+    </HBox>
+
+    <!-- Resultado (arranca vacío) -->
+    <TableView fx:id="tblSocios" VBox.vgrow="ALWAYS">
+        <placeholder><Label text="Ingresá un DNI y presioná Buscar"/></placeholder>
+        <columns>
+            <TableColumn fx:id="colDni"      text="DNI"      prefWidth="120"/>
+            <TableColumn fx:id="colApellido" text="Apellido" prefWidth="160"/>
+            <TableColumn fx:id="colNombre"   text="Nombre"   prefWidth="160"/>
+            <TableColumn fx:id="colEmail"    text="Email"    prefWidth="220"/>
+            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
+            <TableColumn fx:id="colActivo"   text="Estado"   prefWidth="90"/>
+            <TableColumn fx:id="colSaldo"    text="Saldo"    prefWidth="110"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="8">
+        <Button text="Abrir"  onAction="#onAbrir"/>
+        <Button text="Nuevo"  onAction="#onNuevo"/>
+        <Button text="Editar" onAction="#onEditar"/>
+    </HBox>
+</VBox>

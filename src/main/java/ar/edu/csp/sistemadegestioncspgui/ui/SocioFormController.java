@@ -1,110 +1,102 @@
 package ar.edu.csp.sistemadegestioncspgui.ui;
 
+import ar.edu.csp.sistemadegestioncspgui.dao.SocioDao;
+import ar.edu.csp.sistemadegestioncspgui.dao.SocioDaoImpl;
+import ar.edu.csp.sistemadegestioncspgui.model.EstadoSocio;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
-import javafx.stage.Stage;
+import javafx.stage.Window;
+
+import java.time.LocalDate;
 
 public class SocioFormController {
+
+    // fx:id EXACTOS del FXML
     @FXML private TextField txtDni, txtApellido, txtNombre, txtEmail, txtTelefono, txtDomicilio;
     @FXML private DatePicker dpFechaNac, dpFechaBaja;
     @FXML private CheckBox chkActivo;
-    @FXML private Button btnGuardar, btnCancelar; // asegurate de setear fx:id en el FXML
+    @FXML private Button btnGuardar, btnCancelar;
 
-    private Socio socio; // copia editable
-    private boolean ok;
+    private final SocioDao socioDao = new SocioDaoImpl();
+    private Socio socio = new Socio();   // por defecto “alta”
+    private boolean saved = false;
+
+    // --- API para el caller (SocioForm.showDialog) ---
+    public void setSocio(Socio s) {
+        this.socio = (s != null ? s : new Socio());
+        fillFormFromModel();
+    }
+    public Socio getSocio() { return socio; }
+    public boolean isSaved() { return saved; }
 
     @FXML
-    private void initialize() {
-        // Enter -> guardar | Esc -> cancelar
-        txtNombre.getScene(); // (el Scene puede ser null en initialize; por eso usamos setOnKeyPressed en root en onShown si querés)
-        // Bind básico: cuando cambia "Activo", habilita/deshabilita fecha de baja
-        chkActivo.selectedProperty().addListener((obs, was, isSel) -> {
-            dpFechaBaja.setDisable(isSel);
-            if (isSel) dpFechaBaja.setValue(null);
-        });
-
-        // Handlers de teclado sobre controles principales
-        setEnterEsc(txtDni);
-        setEnterEsc(txtApellido);
-        setEnterEsc(txtNombre);
-        setEnterEsc(txtEmail);
-        setEnterEsc(txtTelefono);
-        setEnterEsc(txtDomicilio);
-        dpFechaNac.setOnKeyPressed(e -> { if (e.getCode() == KeyCode.ENTER) onGuardar(); else if (e.getCode() == KeyCode.ESCAPE) onCancelar(); });
-        dpFechaBaja.setOnKeyPressed(e -> { if (e.getCode() == KeyCode.ENTER) onGuardar(); else if (e.getCode() == KeyCode.ESCAPE) onCancelar(); });
+    public void initialize() {
+        // valores por defecto en ALTA
+        chkActivo.setSelected(true);
     }
 
-    private void setEnterEsc(Control c) {
-        c.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ENTER) onGuardar();
-            else if (e.getCode() == KeyCode.ESCAPE) onCancelar();
-        });
-    }
-
-    public void setSocio(Socio s) {
-        socio = (s == null) ? new Socio() : copy(s);
-        if (s != null) {
-            txtDni.setText(s.getDni());
-            txtApellido.setText(s.getApellido());
-            txtNombre.setText(s.getNombre());
-            txtEmail.setText(s.getEmail());
-            txtTelefono.setText(s.getTelefono());
-            txtDomicilio.setText(s.getDomicilio());
-            dpFechaNac.setValue(s.getFechaNac());
-            dpFechaBaja.setValue(s.getFechaBaja());
-            chkActivo.setSelected(s.isActivo()); // <-- enum -> boolean
-        } else {
-            chkActivo.setSelected(true);
-            dpFechaBaja.setDisable(true);
-        }
-    }
-
-    private Socio copy(Socio s) {
-        return new Socio(
-                s.getId(), s.getDni(), s.getNombre(), s.getApellido(),
-                s.getFechaNac(), s.getDomicilio(), s.getEmail(), s.getTelefono(),
-                s.getEstado(), s.getFechaAlta(), s.getFechaBaja()
-        );
-    }
-
+    // --- Botones ---
     @FXML
     private void onGuardar() {
-        String dni = (txtDni.getText() == null ? "" : txtDni.getText().replaceAll("\\D", ""));
-        if (dni.isBlank()) { warn("El DNI es obligatorio."); txtDni.requestFocus(); return; }
-        if (txtApellido.getText() == null || txtApellido.getText().isBlank()) { warn("El apellido es obligatorio."); txtApellido.requestFocus(); return; }
-        if (txtNombre.getText() == null || txtNombre.getText().isBlank()) { warn("El nombre es obligatorio."); txtNombre.requestFocus(); return; }
+        try {
+            dumpFormToModel(); // vuelco campos -> modelo
 
-        // Si está activo, no debe tener fecha de baja
-        if (chkActivo.isSelected() && dpFechaBaja.getValue() != null) {
-            warn("Un socio ACTIVO no puede tener fecha de baja. Quitala o marcá como inactivo.");
-            dpFechaBaja.requestFocus();
-            return;
+            if (socio.getId() == null) {
+                long id = socioDao.crear(socio);
+                socio.setId(id);
+            } else {
+                socioDao.actualizar(socio);
+            }
+            saved = true;
+            close();
+        } catch (Exception e) {
+            new Alert(Alert.AlertType.ERROR, "No se pudo guardar:\n" + e.getMessage()).showAndWait();
+            e.printStackTrace();
         }
+    }
 
-        socio.setDni(dni);
-        socio.setApellido(txtApellido.getText().trim());
-        socio.setNombre(txtNombre.getText().trim());
-        socio.setEmail((txtEmail.getText() == null) ? null : txtEmail.getText().trim().toLowerCase());
-        socio.setTelefono((txtTelefono.getText() == null) ? null : txtTelefono.getText().trim());
-        socio.setDomicilio((txtDomicilio.getText() == null) ? null : txtDomicilio.getText().trim());
+    @FXML
+    private void onCancelar() {
+        saved = false;
+        close();
+    }
+
+    private void close() {
+        Window w = btnCancelar.getScene().getWindow();
+        if (w != null) w.hide();
+    }
+
+    // --- Helper: modelo -> UI
+    private void fillFormFromModel() {
+        txtDni.setText(nv(socio.getDni()));
+        txtApellido.setText(nv(socio.getApellido()));
+        txtNombre.setText(nv(socio.getNombre()));
+        txtEmail.setText(nv(socio.getEmail()));
+        txtTelefono.setText(nv(socio.getTelefono()));
+        txtDomicilio.setText(nv(socio.getDomicilio()));
+        dpFechaNac.setValue(socio.getFechaNac());
+        dpFechaBaja.setValue(socio.getFechaBaja());
+        chkActivo.setSelected(socio.getEstado() == null || socio.getEstado() == EstadoSocio.ACTIVO);
+    }
+
+    // --- Helper: UI -> modelo
+    private void dumpFormToModel() {
+        socio.setDni(req(txtDni.getText(), "El DNI es obligatorio."));
+        socio.setApellido(req(txtApellido.getText(), "El apellido es obligatorio."));
+        socio.setNombre(req(txtNombre.getText(), "El nombre es obligatorio."));
+        socio.setEmail(nt(txtEmail.getText()));
+        socio.setTelefono(nt(txtTelefono.getText()));
+        socio.setDomicilio(nt(txtDomicilio.getText()));
         socio.setFechaNac(dpFechaNac.getValue());
-        socio.setFechaBaja(chkActivo.isSelected() ? null : dpFechaBaja.getValue());
-        socio.setActivo(chkActivo.isSelected()); // <-- enum via helper
-
-        ok = true;
-        Navigation.backOr("/socios-menu-view.fxml", "Socios");
+        socio.setFechaBaja(dpFechaBaja.getValue());
+        socio.setEstado(chkActivo.isSelected() ? EstadoSocio.ACTIVO : EstadoSocio.INACTIVO);
     }
 
-    @FXML private void onCancelar() {
-        ok = false;
-        Navigation.backOr("/socios-menu-view.fxml", "Socios");;
+    private static String nv(String s) { return s == null ? "" : s; }
+    private static String nt(String s) { return (s == null || s.isBlank()) ? null : s.trim(); }
+    private static String req(String s, String msg) {
+        if (s == null || s.isBlank()) throw new IllegalArgumentException(msg);
+        return s.trim();
     }
-
-    private void warn(String msg) { new Alert(Alert.AlertType.WARNING, msg).showAndWait(); }
-    private void close() { ((Stage) txtDni.getScene().getWindow()).close(); }
-
-    public boolean isOk() { return ok; }
-    public Socio getResultado() { return socio; }
 }

@@ -40,5 +40,6 @@
         <Button fx:id="btnNuevo"   text="Nuevo"    onAction="#onNuevo"/>
         <Button fx:id="btnEditar"  text="Editar"   onAction="#onEditar"/>
         <Button fx:id="btnEliminar" text="Eliminar" onAction="#onEliminar"/>
+        <Button text="Volver"     onAction="#onVolver"/>
     </HBox>
 </VBox>
