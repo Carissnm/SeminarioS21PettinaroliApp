@@ -9,7 +9,7 @@ public class ActividadesMenuController {
         Navigation.setSectionTitle("Actividades");
     }
 
-    @FXML private void irAltaActividad() { Navigation.loadInMain("ui/ActividadForm.fxml", "Actividades"); }
-    @FXML private void irListarActiv() { Navigation.loadInMain("ui/ActividadesList.fxml", "Actividades"); }
-    @FXML private void volver() { Navigation.back(); }
+    @FXML private void irAltaActividad() { Navigation.loadInMain("/actividad-form-view.fxml", "Actividades"); }
+    @FXML private void irListarActiv() { Navigation.loadInMain("/actividades-list-view.fxml", "Actividades"); }
+    @FXML private void volver() { Navigation.loadInMain("/home-view.fxml", "Inicio");}
 }

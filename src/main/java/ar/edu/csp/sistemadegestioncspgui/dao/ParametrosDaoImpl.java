@@ -38,4 +38,18 @@ public class ParametrosDaoImpl implements ParametrosDao {
             }
         }
     }
+
+    public Optional<BigDecimal> getNumero(String clave) {
+        try (var cn = ds.getConnection();
+             var ps = cn.prepareStatement("SELECT valor_num FROM parametros_globales WHERE clave=?")) {
+            ps.setString(1, clave);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? Optional.ofNullable(rs.getBigDecimal(1)) : Optional.empty();
+            }
+        } catch (SQLException e) {
+            // logueá si querés
+            return Optional.empty();
+        }
+    }
+
 }

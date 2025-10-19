@@ -8,11 +8,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.stage.Window;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 public class SociosListController {
 
@@ -56,7 +58,6 @@ public class SociosListController {
     }
 
     @FXML private void onBuscar() {
-        // En la pantalla de LISTAR, "Buscar" navega a la pantalla dedicada de búsqueda
         Navigation.loadInMain("/socios-buscar-view.fxml", "Socios");
     }
 
@@ -69,15 +70,15 @@ public class SociosListController {
 
     @FXML
     private void onNuevo() {
-        SelectionContext.setSocioActual(null); // <-- importante
-        Navigation.loadInMain("/socio-form-view.fxml", "Socios");
+        SelectionContext.setSocioActual(null);
+        Navigation.loadInMain("/socio-form-view.fxml", "Socios"); // ✅ embebido
     }
 
     @FXML private void onEditar() {
         Socio s = tblSocios.getSelectionModel().getSelectedItem();
         if (s == null) { info("Seleccioná un socio para editar."); return; }
         SelectionContext.setSocioActual(s);
-        Navigation.loadInMain("/socio-form-view.fxml", "Socios");
+        Navigation.loadInMain("/socio-form-view.fxml", "Socios"); // ✅ embebido
     }
 
     @FXML private void onEliminar() {
@@ -113,7 +114,7 @@ public class SociosListController {
         NumberFormat f = NumberFormat.getCurrencyInstance(new Locale("es", "AR"));
         if (saldo instanceof BigDecimal b) return f.format(b);
         if (saldo instanceof Number n) return f.format(n.doubleValue());
-        try { return f.format(new BigDecimal(saldo.toString())); } catch (Exception e) { return saldo.toString(); }
+        try { return f.format(new java.math.BigDecimal(saldo.toString())); } catch (Exception e) { return saldo.toString(); }
     }
 
     private static void info(String m)  { new Alert(Alert.AlertType.INFORMATION, m, ButtonType.OK).showAndWait(); }

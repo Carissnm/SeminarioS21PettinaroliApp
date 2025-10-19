@@ -15,4 +15,5 @@ module ar.edu.csp.sistemadegestioncspgui {
 
     // Abrí solo los controllers para FXML (reflexión del FXMLLoader)
     opens ar.edu.csp.sistemadegestioncspgui.ui to javafx.fxml;
+    opens ar.edu.csp.sistemadegestioncspgui.model to javafx.base;
 }

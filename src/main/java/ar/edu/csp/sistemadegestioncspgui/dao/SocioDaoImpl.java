@@ -143,6 +143,8 @@ public class SocioDaoImpl implements SocioDao {
         }
     }
 
+
+
     @Override
     public long crear(Socio s) throws SQLException {
         long id; // guardamos el id para usarlo luego
@@ -175,14 +177,14 @@ public class SocioDaoImpl implements SocioDao {
             }
             // === Cargo inicial por alta ===
             try {
-                var params    = new ar.edu.csp.sistemadegestioncspgui.dao.ParametrosDaoImpl();
-                var cuentaDao = new ar.edu.csp.sistemadegestioncspgui.dao.CuentaDaoImpl();
+                var params = new ParametrosDaoImpl();
+                var cuentaDao = new CuentaDaoImpl();
+                var monto = params.getNumero("CUOTA_INICIAL_CLUB")
+                        .or(() -> params.getNumero("CUOTA_MENSUAL_CLUB")) // fallback
+                        .orElse(BigDecimal.ZERO);
 
-                var montoOpt = params.getDecimal("cuota_club"); // clave en parametros_globales
-                if (montoOpt.isPresent() && montoOpt.get().signum() > 0) {
-                    var ym = java.time.YearMonth.now();
-                    var desc = "Cuota de alta (" + ym + ")";
-                    cuentaDao.registrarCargo(s.getId(), montoOpt.get(), desc); // genera movimiento NEGATIVO
+                if (monto.signum() > 0) {
+                    cuentaDao.registrarDebitoAltaClub(id, monto);
                 }
             } catch (Exception e) {
                 e.printStackTrace(); // no romper el alta si falla el cargo

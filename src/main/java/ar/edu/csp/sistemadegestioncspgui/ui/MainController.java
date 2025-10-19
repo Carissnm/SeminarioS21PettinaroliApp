@@ -16,11 +16,15 @@ public class MainController {
 
     @FXML
     public void initialize() {
-        // Inicializa el helper una sola vez
+        // 1) Inicializar Navigation con los nodos del main layout
         Navigation.init(centerPane, lblSectionTitle);
 
-        // (Opcional) pantalla inicial
-        // Navigation.loadInMain("/socios-menu-view.fxml", "Socios");
+        // 2) (Opcional) Título por defecto
+        Navigation.setSectionTitle("Inicio");
+
+        // 3) Cargar la vista inicial (si querés mostrar el logo/home)
+        //    Asegurate de tener /home-view.fxml en resources
+        Navigation.loadInMain("/home-view.fxml", "Inicio");
     }
     private void loadCenter(String absoluteFxmlPath) {
         try {

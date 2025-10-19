@@ -92,19 +92,44 @@ public class CuentaDaoImpl implements CuentaDao {
         );
     }
 
-    @Override
-    public void registrarCargoActividad(long socioId, BigDecimal importe, Long inscripcionId, String descripcion) throws Exception {
-        if (importe == null || importe.signum() <= 0)
-            throw new IllegalArgumentException("Importe de cargo inválido");
-        registrarMovimiento(
-                socioId,
-                java.time.LocalDate.now(),
-                "CARGO",
-                (descripcion == null ? "Cargo actividad" : descripcion),
-                importe.negate(), // cargo resta
-                null,
-                inscripcionId
-        );
+    // Asegura la cuenta y registra el cargo de actividad como DEUDA (importe negativo)
+    public void registrarCargoActividad(long socioId,
+                                        java.math.BigDecimal precio,
+                                        Long inscripcionId,
+                                        String referenciaExt) throws Exception {
+        long cuentaId = ensureCuenta(socioId); // crea si no existe
+
+        try (var cn = ds.getConnection()) {
+            cn.setAutoCommit(false);
+            try (var ps = cn.prepareStatement("""
+            INSERT INTO movimiento_cuenta (cuenta_id, tipo, descripcion, importe, inscripcion_id)
+            VALUES (?, 'INSCRIPCION_ACTIVIDAD', ?, ?, ?)
+        """)) {
+                ps.setLong(1, cuentaId);
+                ps.setString(2, (referenciaExt == null || referenciaExt.isBlank())
+                        ? "Inscripción de actividad" : referenciaExt);
+                ps.setBigDecimal(3, precio.negate());   // 👈 deuda ⇒ NEGATIVO
+                if (inscripcionId == null) ps.setNull(4, java.sql.Types.BIGINT);
+                else ps.setLong(4, inscripcionId);
+                ps.executeUpdate();
+            }
+            cn.commit();
+            cn.setAutoCommit(true);
+        }
+    }
+
+
+    public void registrarDebitoAltaClub(long socioId, BigDecimal importe) throws Exception {
+        long cuentaId = ensureCuenta(socioId);
+        try (var cn = ds.getConnection();
+             var ps = cn.prepareStatement("""
+            INSERT INTO movimiento_cuenta (cuenta_id, tipo, descripcion, importe)
+            VALUES (?, 'ALTA_SOCIO_CUOTA_CLUB', 'Cuota de alta del club', ?)
+         """)) {
+            ps.setLong(1, cuentaId);
+            ps.setBigDecimal(2, importe.negate()); // débito => NEGATIVO
+            ps.executeUpdate();
+        }
     }
 
 

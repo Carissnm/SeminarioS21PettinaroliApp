@@ -2,9 +2,6 @@ package ar.edu.csp.sistemadegestioncspgui.dao;
 
 import ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory;
 import ar.edu.csp.sistemadegestioncspgui.model.EstadoInscripcion;
-
-import ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory;
-import ar.edu.csp.sistemadegestioncspgui.model.EstadoInscripcion;
 import ar.edu.csp.sistemadegestioncspgui.model.Inscripcion;
 
 import javax.sql.DataSource;
@@ -84,11 +81,20 @@ public class InscripcionDaoImpl implements InscripcionDao {
 
     @Override
     public long inscribir(long socioId, long actividadId, BigDecimal precioUsado, String observacion) throws Exception {
-        if (precioUsado == null || precioUsado.signum() <= 0) throw new IllegalArgumentException("Precio inválido");
-        if (buscarActiva(socioId, actividadId).isPresent()) throw new IllegalStateException("El socio ya está inscripto en esta actividad");
+        if (precioUsado == null || precioUsado.signum() <= 0) {
+            throw new IllegalArgumentException("Precio inválido");
+        }
+        if (buscarActiva(socioId, actividadId).isPresent()) {
+            throw new IllegalStateException("El socio ya está inscripto en esta actividad");
+        }
 
         long inscId;
         try (var cn = ds.getConnection()) {
+            // ✅ Chequeo de apto médico vigente ANTES del INSERT
+            if (!aptoVigente(socioId, cn)) {
+                throw new IllegalStateException("El socio no posee apto médico vigente.");
+            }
+
             cn.setAutoCommit(false);
 
             try (var ps = cn.prepareStatement(INS_SQL, Statement.RETURN_GENERATED_KEYS)) {
@@ -106,7 +112,7 @@ public class InscripcionDaoImpl implements InscripcionDao {
             cn.setAutoCommit(true);
         }
 
-        // Cargo en cuenta (negativo) vinculado a la inscripción
+        // Cargo en cuenta (negativo) vinculado a la inscripción (fuera de la tx anterior, como ya lo tenías)
         var act = actDao.buscarPorId(actividadId).orElseThrow(() -> new IllegalArgumentException("Actividad inexistente"));
         String desc = (observacion == null || observacion.isBlank())
                 ? "Inscripción a " + act.getNombre()
@@ -122,6 +128,22 @@ public class InscripcionDaoImpl implements InscripcionDao {
             ps.setDate(1, java.sql.Date.valueOf(fechaBaja == null ? LocalDate.now() : fechaBaja));
             ps.setLong(2, inscripcionId);
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    // === Helper: apto médico vigente (fecha_vencimiento >= hoy) ===
+    private boolean aptoVigente(long socioId, Connection cn) throws Exception {
+        try (var ps = cn.prepareStatement("""
+            SELECT 1
+              FROM apto_medico
+             WHERE socio_id = ?
+               AND fecha_vencimiento >= CURRENT_DATE()
+             LIMIT 1
+        """)) {
+            ps.setLong(1, socioId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 }
