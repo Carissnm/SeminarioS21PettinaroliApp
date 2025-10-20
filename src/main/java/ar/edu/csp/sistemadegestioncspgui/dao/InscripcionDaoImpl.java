@@ -34,7 +34,7 @@ public class InscripcionDaoImpl implements InscripcionDao {
         """;
 
     private static final String BAJA_SQL = """
-        UPDATE inscripcion SET fecha_baja=?, estado='INACTIVA' WHERE id=?
+        UPDATE inscripcion SET fecha_baja=?, estado='BAJA' WHERE id=?
         """;
 
     private Inscripcion map(ResultSet rs) throws SQLException {
@@ -81,39 +81,49 @@ public class InscripcionDaoImpl implements InscripcionDao {
 
     @Override
     public long inscribir(long socioId, long actividadId, BigDecimal precioUsado, String observacion) throws Exception {
-        if (precioUsado == null || precioUsado.signum() <= 0) {
+        if (precioUsado == null || precioUsado.signum() <= 0)
             throw new IllegalArgumentException("Precio inválido");
-        }
-        if (buscarActiva(socioId, actividadId).isPresent()) {
+        if (buscarActiva(socioId, actividadId).isPresent())
             throw new IllegalStateException("El socio ya está inscripto en esta actividad");
-        }
 
         long inscId;
+
         try (var cn = ds.getConnection()) {
-            // ✅ Chequeo de apto médico vigente ANTES del INSERT
-            if (!aptoVigente(socioId, cn)) {
-                throw new IllegalStateException("El socio no posee apto médico vigente.");
-            }
+            boolean origAuto = cn.getAutoCommit();
+            try {
+                // ✅ Chequeo de apto vigente dentro de la misma conexión
+                if (!aptoVigente(socioId, cn))
+                    throw new IllegalStateException("El socio no posee apto médico vigente.");
 
-            cn.setAutoCommit(false);
+                cn.setAutoCommit(false);
 
-            try (var ps = cn.prepareStatement(INS_SQL, Statement.RETURN_GENERATED_KEYS)) {
-                ps.setLong(1, socioId);
-                ps.setLong(2, actividadId);
-                ps.setBigDecimal(3, precioUsado);
-                ps.executeUpdate();
-                try (var keys = ps.getGeneratedKeys()) {
-                    if (keys.next()) inscId = keys.getLong(1);
-                    else throw new SQLException("No se generó ID de inscripción");
+                try (var ps = cn.prepareStatement("""
+                    INSERT INTO inscripcion (socio_id, actividad_id, precio_alta, fecha_alta, estado)
+                    VALUES (?, ?, ?, CURRENT_DATE, 'ACTIVA')
+                """, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setLong(1, socioId);
+                    ps.setLong(2, actividadId);
+                    ps.setBigDecimal(3, precioUsado);
+                    ps.executeUpdate();
+                    try (var keys = ps.getGeneratedKeys()) {
+                        if (keys.next()) inscId = keys.getLong(1);
+                        else throw new SQLException("No se generó ID de inscripción");
+                    }
                 }
-            }
 
-            cn.commit();
-            cn.setAutoCommit(true);
+                cn.commit();
+            } catch (Exception ex) {
+                try { cn.rollback(); } catch (Exception ignore) {}
+                throw ex;
+            } finally {
+                try { cn.setAutoCommit(origAuto); } catch (Exception ignore) {}
+            }
         }
 
-        // Cargo en cuenta (negativo) vinculado a la inscripción (fuera de la tx anterior, como ya lo tenías)
-        var act = actDao.buscarPorId(actividadId).orElseThrow(() -> new IllegalArgumentException("Actividad inexistente"));
+        // Cargo en cuenta (fuera de la tx anterior; si querés transacción única,
+        // habría que permitir pasar el Connection al CuentaDao).
+        var act = actDao.buscarPorId(actividadId)
+                .orElseThrow(() -> new IllegalArgumentException("Actividad inexistente"));
         String desc = (observacion == null || observacion.isBlank())
                 ? "Inscripción a " + act.getNombre()
                 : observacion;
@@ -134,12 +144,12 @@ public class InscripcionDaoImpl implements InscripcionDao {
     // === Helper: apto médico vigente (fecha_vencimiento >= hoy) ===
     private boolean aptoVigente(long socioId, Connection cn) throws Exception {
         try (var ps = cn.prepareStatement("""
-            SELECT 1
-              FROM apto_medico
-             WHERE socio_id = ?
-               AND fecha_vencimiento >= CURRENT_DATE()
-             LIMIT 1
-        """)) {
+        SELECT 1
+          FROM apto_medico
+         WHERE socio_id = ?
+           AND fecha_vencimiento >= CURRENT_DATE
+         LIMIT 1
+    """)) {
             ps.setLong(1, socioId);
             try (var rs = ps.executeQuery()) {
                 return rs.next();

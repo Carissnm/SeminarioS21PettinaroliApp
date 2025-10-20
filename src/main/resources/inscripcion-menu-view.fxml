@@ -8,8 +8,7 @@
             prefWidth="900" prefHeight="560">
     <top>
         <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
-            <Label text="Socios" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
-            <!-- si preferís que diga "Inscripciones", cambialo -->
+            <Label text="Inscripciones" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
         </HBox>
     </top>
 
@@ -20,27 +19,35 @@
                 <ColumnConstraints hgrow="ALWAYS"/>
             </columnConstraints>
 
+            <!-- Socio -->
             <Label text="Socio:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-            <HBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                <TextField fx:id="txtSocio" promptText="Seleccioná socio" HBox.hgrow="ALWAYS" editable="false"/>
-                <Button text="Buscar..." onAction="#buscarSocio"/>
+            <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                <TextField fx:id="txtSocioDni" promptText="DNI del socio" onAction="#onBuscarSocioPorDni" HBox.hgrow="ALWAYS"/>
+                <Button text="Buscar..." onAction="#onBuscarSocioPorDni"/>
             </HBox>
 
+            <!-- Actividad -->
             <Label text="Actividad:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-            <ComboBox fx:id="cmbActividad" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="320"/>
+            <!--id cambiado a cbActividad y handler agregado -->
+            <ComboBox fx:id="cbActividad" onAction="#onActividadChange"
+                      GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="320"/>
 
+            <!-- Fecha -->
             <Label text="Fecha alta:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
             <DatePicker fx:id="dpFechaAlta" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
+            <!-- Precio (solo lectura; viene de actividad.precio_default) -->
             <Label text="Precio alta:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtPrecioAlta" GridPane.rowIndex="3" GridPane.columnIndex="1" promptText="ej: 12000.00"/>
+            <TextField fx:id="txtPrecioAlta" editable="false"
+                       GridPane.rowIndex="3" GridPane.columnIndex="1"
+                       promptText="ej: 12000.00"/>
         </GridPane>
     </center>
 
     <bottom>
         <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding: 12 18;">
-            <Button text="Guardar" onAction="#guardar"/>
-            <Button text="Cancelar" onAction="#cancelar"/>
+            <Button text="Guardar"  onAction="#onGuardarInscripcion"/>
+            <Button text="Cancelar" onAction="#onCancelar"/>
         </HBox>
     </bottom>
 </BorderPane>

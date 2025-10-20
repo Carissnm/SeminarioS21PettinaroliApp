@@ -49,7 +49,7 @@
                 <tooltip><Tooltip text="Listados y balances"/></tooltip>
             </Button>
             <Separator/>
-            <Button text="⚙️ Configuración"  mnemonicParsing="true" maxWidth="Infinity" onAction="#onConfig"/>
+            <Button text="Configuración"  mnemonicParsing="true" maxWidth="Infinity" onAction="#onConfig"/>
         </VBox>
     </left>
 
