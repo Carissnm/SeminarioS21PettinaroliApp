@@ -1,38 +1,62 @@
 package ar.edu.csp.sistemadegestioncspgui.ui;
 
+import ar.edu.csp.sistemadegestioncspgui.dao.AptoMedicoDao;
+import ar.edu.csp.sistemadegestioncspgui.dao.AptoMedicoDaoImpl;
 import ar.edu.csp.sistemadegestioncspgui.dao.SocioDao;
 import ar.edu.csp.sistemadegestioncspgui.dao.SocioDaoImpl;
 import ar.edu.csp.sistemadegestioncspgui.model.EstadoSocio;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 public class SocioFormController {
 
-    // fx:id EXACTOS del FXML
+    // fx:id del FXML
     @FXML private TextField txtDni, txtApellido, txtNombre, txtEmail, txtTelefono, txtDomicilio;
     @FXML private DatePicker dpFechaNac, dpFechaBaja;
     @FXML private CheckBox chkActivo;
     @FXML private Button btnGuardar, btnCancelar;
+    @FXML private CheckBox chkApto;
+    @FXML private DatePicker dpAptoEmision;
 
+    private final AptoMedicoDao aptoDao = new AptoMedicoDaoImpl();
     private final SocioDao socioDao = new SocioDaoImpl();
-    private Socio socio = new Socio();   // por defecto “alta”
+    private Socio socio = new Socio();   // estado en edición
     private boolean saved = false;
 
-    // --- API para el caller (SocioForm.showDialog) ---
-    public void setSocio(Socio s) {
-        this.socio = (s != null ? s : new Socio());
-        fillFormFromModel();
-    }
-    public Socio getSocio() { return socio; }
-    public boolean isSaved() { return saved; }
-
+    // --- Inicialización: tomar socio del contexto y refrescar desde DB ---
     @FXML
     public void initialize() {
-        // valores por defecto en ALTA
-        chkActivo.setSelected(true);
+        try {
+            // Si hay socio en el contexto, es edición; si no, alta
+            Socio ctx = SelectionContext.getSocioActual();
+
+            if (ctx != null && ctx.getId() != null) {
+                // Refrescar desde DB para traer datos actuales
+                socio = socioDao.buscarPorId(ctx.getId())
+                        .orElse(ctx); // por las dudas, si no está, usamos el del contexto
+                Navigation.setSectionTitle("Editar socio");
+            } else {
+                socio = new Socio();
+                Navigation.setSectionTitle("Alta de socio");
+            }
+
+            // Si no hay estado, por defecto ACTIVO en alta
+            if (socio.getEstado() == null) {
+                chkActivo.setSelected(true);
+                socio.setEstado(EstadoSocio.ACTIVO);
+            }
+
+            if (dpAptoEmision != null) dpAptoEmision.setValue(java.time.LocalDate.now());
+
+            // Poblar UI
+            fillFormFromModel();
+
+        } catch (Exception e) {
+            error("No se pudo cargar los datos del socio:\n" + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // --- Botones ---
@@ -49,16 +73,23 @@ public class SocioFormController {
             }
             saved = true;
 
-            // ✅ Mostrar éxito y volver al MENÚ de Socios
-            ButtonType CONTINUAR = new ButtonType("Continuar", ButtonBar.ButtonData.OK_DONE);
-            Alert ok = new Alert(Alert.AlertType.INFORMATION, "El socio se guardó con éxito.", CONTINUAR);
-            ok.setHeaderText(null);
-            ok.showAndWait();
+            if (chkApto != null && chkApto.isSelected()) {
+                var emision = (dpAptoEmision.getValue() == null ? java.time.LocalDate.now() : dpAptoEmision.getValue());
+                var venc = emision.plusYears(1);
+                try {
+                    aptoDao.upsertApto(socio.getId(), emision, venc);
+                } catch (Exception ex) {
+                    error("El socio se guardó, pero no pude registrar el apto médico:\n" + ex.getMessage());
+                }
+            }
 
-            navigateToSociosMenu();
+
+            // Volver al menú principal de Socios con mensaje de éxito
+            info("Los datos del socio se guardaron correctamente.");
+            Navigation.loadInMain("/socios-menu-view.fxml", "Socios");
 
         } catch (Exception e) {
-            new Alert(Alert.AlertType.ERROR, "No se pudo guardar:\n" + e.getMessage()).showAndWait();
+            error("No se pudo guardar:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -66,27 +97,10 @@ public class SocioFormController {
     @FXML
     private void onCancelar() {
         saved = false;
-        // ❗ Sin cerrar ventana principal: simplemente volvemos al MENÚ Socios
-        navigateToSociosMenu();
+        Navigation.backOr("/socios-menu-view.fxml", "Socios");
     }
 
-    private void navigateToSociosMenu() {
-        Navigation.loadInMain("/socios-menu-view.fxml", "Socios");
-    }
-
-    /** Cierra SOLO si es un diálogo modal; si no, navega sin cerrar la ventana principal. */
-    private void closeIfDialogOrNavigateBack() {
-        Window w = btnCancelar.getScene().getWindow();
-        if (w instanceof Stage s && s.getOwner() != null) {
-            // Es un diálogo modal -> cerrar
-            s.close();
-        } else {
-            // Está embebido en el main -> NO cerrar la app; volver al menú/lista
-            Navigation.loadInMain("/socios-menu-view.fxml", "Socios");
-        }
-    }
-
-    // --- Helper: modelo -> UI
+    // --- Helpers: modelo -> UI ---
     private void fillFormFromModel() {
         txtDni.setText(nv(socio.getDni()));
         txtApellido.setText(nv(socio.getApellido()));
@@ -96,10 +110,12 @@ public class SocioFormController {
         txtDomicilio.setText(nv(socio.getDomicilio()));
         dpFechaNac.setValue(socio.getFechaNac());
         dpFechaBaja.setValue(socio.getFechaBaja());
+        if (chkApto != null) chkApto.setSelected(false);
+        if (dpAptoEmision != null) dpAptoEmision.setValue(java.time.LocalDate.now());
         chkActivo.setSelected(socio.getEstado() == null || socio.getEstado() == EstadoSocio.ACTIVO);
     }
 
-    // --- Helper: UI -> modelo
+    // --- Helpers: UI -> modelo ---
     private void dumpFormToModel() {
         socio.setDni(req(txtDni.getText(), "El DNI es obligatorio."));
         socio.setApellido(req(txtApellido.getText(), "El apellido es obligatorio."));
@@ -112,10 +128,21 @@ public class SocioFormController {
         socio.setEstado(chkActivo.isSelected() ? EstadoSocio.ACTIVO : EstadoSocio.INACTIVO);
     }
 
+    // --- API opcional para llamados externos ---
+    public void setSocio(Socio s) {
+        this.socio = (s != null ? s : new Socio());
+        fillFormFromModel();
+    }
+    public Socio getSocio() { return socio; }
+    public boolean isSaved() { return saved; }
+
+    // --- Utiles ---
     private static String nv(String s) { return s == null ? "" : s; }
     private static String nt(String s) { return (s == null || s.isBlank()) ? null : s.trim(); }
     private static String req(String s, String msg) {
         if (s == null || s.isBlank()) throw new IllegalArgumentException(msg);
         return s.trim();
     }
+    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
+    private static void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
 }

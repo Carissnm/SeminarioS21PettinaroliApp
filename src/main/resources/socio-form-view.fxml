@@ -49,11 +49,17 @@
     <DatePicker fx:id="dpFechaBaja"
                 GridPane.rowIndex="7" GridPane.columnIndex="1"/>
 
-    <Label text="Activo:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-    <CheckBox fx:id="chkActivo"
-              GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+    <Label text="Presenta apto médico:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+    <CheckBox fx:id="chkApto" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
 
-    <HBox spacing="8" GridPane.rowIndex="9" GridPane.columnIndex="0" GridPane.columnSpan="2">
+    <Label text="Emisión apto:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
+    <DatePicker fx:id="dpAptoEmision" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+
+    <Label text="Activo:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
+    <CheckBox fx:id="chkActivo"
+              GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+
+    <HBox spacing="8" GridPane.rowIndex="11" GridPane.columnIndex="0" GridPane.columnSpan="2">
         <Button fx:id="btnGuardar" text="Guardar" onAction="#onGuardar" defaultButton="true"/>
         <Button fx:id="btnCancelar" text="Cancelar" onAction="#onCancelar" cancelButton="true"/>
     </HBox>

@@ -30,4 +30,15 @@ public class HomeController {
             imgLogo.setImage(logo);
         }
     }
+
+    private void mostrarEnDesarrollo(String nombre) {
+        new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION,
+                "La funcionalidad '" + nombre + "' todavía no está disponible.\nSerá incorporada en la próxima versión.",
+                javafx.scene.control.ButtonType.OK
+        ).showAndWait();
+    }
+
+
+
 }

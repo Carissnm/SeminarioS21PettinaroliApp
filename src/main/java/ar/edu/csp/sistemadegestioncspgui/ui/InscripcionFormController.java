@@ -56,6 +56,15 @@ public class InscripcionFormController {
 
         // Cargar actividades ACTIVAS
         cargarActividades();
+
+        // Si vengo del detalle, tomar el socio del contexto
+        var socioCtx = SelectionContext.getSocioActual();
+        if (socioCtx != null) {
+            this.socioSel = socioCtx;
+            if (txtSocioDni != null) {
+                txtSocioDni.setText(socioSel.getDni());
+            }
+        }
     }
 
     private void cargarActividades() {
@@ -191,32 +200,66 @@ public class InscripcionFormController {
     @FXML
     private void onGuardarInscripcion() {
         try {
-            if (socioSel == null) { warn("Seleccioná o buscá un socio."); return; }
+            // 1️⃣ Validar DNI del socio
+            String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
+            if (dni.isEmpty()) {
+                warn("Ingresá un DNI de socio válido.");
+                return;
+            }
+
+            // 2️⃣ Buscar el socio en base de datos
+            List<Socio> hallados = socioDao.buscarPorDni(dni);
+            if (hallados.isEmpty()) {
+                warn("No existe ningún socio con ese DNI.");
+                return;
+            }
+
+            // Si hay varios con mismo prefijo → tomar exacto o pedir selección
+            Optional<Socio> exacto = hallados.stream()
+                    .filter(s -> dni.equalsIgnoreCase(s.getDni()))
+                    .findFirst();
+
+            if (exacto.isPresent()) {
+                socioSel = exacto.get();
+            } else if (hallados.size() == 1) {
+                socioSel = hallados.get(0);
+            } else {
+                warn("Se encontraron varios socios con ese prefijo. Usá el botón 'Buscar…'.");
+                return;
+            }
+
+            // 3️⃣ Validar actividad
             Actividad act = cbActividad.getValue();
-            if (act == null) { warn("Seleccioná una actividad."); return; }
+            if (act == null) {
+                warn("Seleccioná una actividad.");
+                return;
+            }
 
             LocalDate fecha = dpFechaAlta != null && dpFechaAlta.getValue() != null
                     ? dpFechaAlta.getValue() : LocalDate.now();
 
             BigDecimal precio = act.getPrecioDefault();
             if (precio == null || precio.signum() <= 0) {
-                warn("La actividad no tiene precio configurado."); return;
+                warn("La actividad no tiene precio configurado.");
+                return;
             }
 
-            // El DAO ya valida apto médico vigente y duplicados
+            // 4️⃣ Intentar inscribir
             inscripcionDao.inscribir(socioSel.getId(), act.getId(), precio, "Inscripción a " + act.getNombre());
 
             info("Inscripción realizada con éxito.");
-            // Volver al menú de inscripciones (ajustá la ruta si tu menú tiene otro nombre)
             Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
 
         } catch (IllegalStateException ex) {
-            // Reglas de negocio: sin apto, ya inscripto, etc.
             error(ex.getMessage());
         } catch (Exception e) {
             error("No se pudo inscribir:\n" + e.getMessage());
             e.printStackTrace();
         }
+    }
+    @FXML
+    private void onVolver() {
+        Navigation.backOr("/home-view.fxml", "Socios");
     }
 
     @FXML

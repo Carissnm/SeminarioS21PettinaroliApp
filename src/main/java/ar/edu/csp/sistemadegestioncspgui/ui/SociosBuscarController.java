@@ -20,6 +20,7 @@ public class SociosBuscarController {
     @FXML private TableView<Socio> tblSocios;
     @FXML private TableColumn<Socio, String> colDni, colApellido, colNombre, colEmail, colTelefono, colActivo, colSaldo;
 
+
     private final ObservableList<Socio> data = FXCollections.observableArrayList();
     private final SocioDao socioDao = new SocioDaoImpl();
 
@@ -35,7 +36,13 @@ public class SociosBuscarController {
         colActivo.setCellValueFactory(c -> new SimpleStringProperty(
                 c.getValue().getEstado() == null ? "" : c.getValue().getEstado().name()));
         colSaldo.setCellValueFactory(c -> new SimpleStringProperty(fmtMoney(c.getValue().getSaldo())));
-
+        tblSocios.setRowFactory(tv -> {
+            TableRow<Socio> row = new TableRow<>();
+            row.setOnMouseClicked(e -> {
+                if (e.getClickCount() == 2 && !row.isEmpty()) abrir(row.getItem());
+            });
+            return row;
+        });
         tblSocios.setItems(data);
         // NO cargamos nada al entrar (arranca vacía)
     }
@@ -66,7 +73,12 @@ public class SociosBuscarController {
     @FXML
     private void onAbrir() {
         Socio s = tblSocios.getSelectionModel().getSelectedItem();
-        if (s == null) { info("Seleccioná un socio para abrir."); return; }
+        if (s == null) { info("Seleccioná un socio de la lista."); return; }
+        abrir(s);
+    }
+
+
+    private void abrir(Socio s) {
         SelectionContext.setSocioActual(s);
         Navigation.loadInMain("/socio-detalle-view.fxml", "Socios");
     }
@@ -92,6 +104,6 @@ public class SociosBuscarController {
         try { return f.format(new BigDecimal(saldo.toString())); } catch (Exception e) { return saldo.toString(); }
     }
 
-    private static void info(String m)  { new Alert(Alert.AlertType.INFORMATION, m, ButtonType.OK).showAndWait(); }
+    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
     private static void error(String m) { new Alert(Alert.AlertType.ERROR, m, ButtonType.OK).showAndWait(); }
 }

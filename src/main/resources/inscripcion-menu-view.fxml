@@ -22,8 +22,8 @@
             <!-- Socio -->
             <Label text="Socio:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
             <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                <TextField fx:id="txtSocioDni" promptText="DNI del socio" onAction="#onBuscarSocioPorDni" HBox.hgrow="ALWAYS"/>
-                <Button text="Buscar..." onAction="#onBuscarSocioPorDni"/>
+                <TextField fx:id="txtSocioDni" onAction="#onBuscarSocioPorDni" promptText="DNI del socio" HBox.hgrow="ALWAYS"/>
+                <Button text="Buscar" onAction="#onBuscarSocioPorDni"/>
             </HBox>
 
             <!-- Actividad -->
@@ -48,6 +48,7 @@
         <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding: 12 18;">
             <Button text="Guardar"  onAction="#onGuardarInscripcion"/>
             <Button text="Cancelar" onAction="#onCancelar"/>
+            <Button text="Volver"     onAction="#onVolver"/>
         </HBox>
     </bottom>
 </BorderPane>

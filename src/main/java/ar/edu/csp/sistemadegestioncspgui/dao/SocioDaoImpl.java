@@ -31,10 +31,33 @@ public class SocioDaoImpl implements SocioDao {
     """;
 
     private static final String SELECT_ALL           = SELECT_BASE + " ORDER BY s.apellido, s.nombre";
-    private static final String SELECT_BY_ID         = SELECT_BASE + " WHERE s.id = ?";
+    private static final String SELECT_BY_ID = """
+    SELECT s.id, s.dni, s.apellido, s.nombre, s.email, s.telefono, s.domicilio,
+           s.fecha_nac, s.fecha_alta, s.fecha_baja, s.estado,
+           COALESCE((
+               SELECT SUM(mc.importe)
+                 FROM cuenta c
+                 JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
+                WHERE c.socio_id = s.id
+           ), 0) AS saldo
+      FROM socio s
+     WHERE s.id = ?
+""";
     private static final String SELECT_BY_DNI_PREFIX = SELECT_BASE + " WHERE s.dni LIKE ? ORDER BY s.apellido, s.nombre";
 
-
+    // Listar todos (activos e inactivos) CON fecha_alta y saldo
+    private static final String SELECT_TODOS = """
+    SELECT s.id, s.dni, s.apellido, s.nombre, s.email, s.telefono, s.domicilio,
+           s.fecha_nac, s.fecha_alta, s.fecha_baja, s.estado,
+           COALESCE((
+               SELECT SUM(mc.importe)
+                 FROM cuenta c
+                 JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
+                WHERE c.socio_id = s.id
+           ), 0) AS saldo
+      FROM socio s
+     ORDER BY s.apellido, s.nombre
+""";
     // INSERT omite estado/fecha_alta para usar defaults de la BD
     private static final String INSERT_SQL = """
         INSERT INTO socio (dni, nombre, apellido, fecha_nac, domicilio, email, telefono, fecha_baja)
@@ -47,6 +70,20 @@ public class SocioDaoImpl implements SocioDao {
                estado = ?, fecha_baja = ?
          WHERE id = ?
         """;
+
+    private static final String BUSCAR_X_DNI = """
+    SELECT s.id, s.dni, s.apellido, s.nombre, s.email, s.telefono, s.domicilio,
+           s.fecha_nac, s.fecha_alta, s.fecha_baja, s.estado,
+           COALESCE((
+               SELECT SUM(mc.importe)
+                 FROM cuenta c
+                 JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
+                WHERE c.socio_id = s.id
+           ), 0) AS saldo
+      FROM socio s
+     WHERE s.dni LIKE CONCAT(?, '%')
+     ORDER BY s.dni
+""";
 
     private static final String SQL_SALDO_SOCIO = """
     SELECT COALESCE(SUM(m.importe), 0) AS saldo
@@ -93,13 +130,13 @@ public class SocioDaoImpl implements SocioDao {
         s.setNombre(rs.getString("nombre"));
         s.setApellido(rs.getString("apellido"));
         s.setFechaNac(toLocal(rs.getDate("fecha_nac")));
+        s.setFechaAlta(toLocal(rs.getDate("fecha_alta")));  // <- ahora sí viene en el SELECT
+        s.setFechaBaja(toLocal(rs.getDate("fecha_baja")));
         s.setDomicilio(rs.getString("domicilio"));
         s.setEmail(rs.getString("email"));
         s.setTelefono(rs.getString("telefono"));
         s.setEstado(EstadoSocio.fromDb(rs.getString("estado")));
-        s.setFechaAlta(toLocal(rs.getDate("fecha_alta")));
-        s.setFechaBaja(toLocal(rs.getDate("fecha_baja")));
-        s.setSaldo(rs.getBigDecimal("saldo"));
+        s.setSaldo(rs.getBigDecimal("saldo"));              // <- viene como alias del subquery
         return s;
     }
 
@@ -117,14 +154,11 @@ public class SocioDaoImpl implements SocioDao {
     }
 
     @Override
-    public List<Socio> buscarPorDni(String dniPrefix) throws SQLException {
-        String pattern = (dniPrefix == null || dniPrefix.isBlank())
-                ? "%"
-                : dniPrefix.replaceAll("\\D", "") + "%";
-        try (Connection cn = ds.getConnection();
-             PreparedStatement st = cn.prepareStatement(SELECT_BY_DNI_PREFIX)) {
-            st.setString(1, pattern);
-            try (ResultSet rs = st.executeQuery()) {
+    public List<Socio> buscarPorDni(String dni) throws SQLException {
+        try (var cn = ds.getConnection();
+             var ps = cn.prepareStatement(BUSCAR_X_DNI)) {
+            ps.setString(1, dni == null ? "" : dni.trim());
+            try (var rs = ps.executeQuery()) {
                 List<Socio> out = new ArrayList<>();
                 while (rs.next()) out.add(mapRow(rs));
                 return out;

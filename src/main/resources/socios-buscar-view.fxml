@@ -31,7 +31,7 @@
     </TableView>
 
     <HBox spacing="8">
-        <Button text="Abrir"  onAction="#onAbrir"/>
+        <Button text="Abrir" onAction="#onAbrir"/>
         <Button text="Nuevo"  onAction="#onNuevo"/>
         <Button text="Editar" onAction="#onEditar"/>
     </HBox>

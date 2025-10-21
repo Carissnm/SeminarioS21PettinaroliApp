@@ -1,48 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
 
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SocioDetalleController"
-            prefWidth="900" prefHeight="560">
+            prefWidth="1000" prefHeight="620">
     <top>
-        <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
-            <Label text="Socios" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
-        </HBox>
+        <VBox>
+            <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
+                <Label text="Detalle del socio" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+            </HBox>
+            <HBox spacing="16" style="-fx-padding:10 18;">
+                <Label fx:id="lblNombre" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+                <Label fx:id="lblEmailTel"/>
+                <Label fx:id="lblEstadoSaldo"/>
+                <Pane HBox.hgrow="ALWAYS"/>
+                <Button text="Volver" onAction="#onVolver"/>
+            </HBox>
+        </VBox>
     </top>
 
     <center>
-        <GridPane hgap="12" vgap="10" style="-fx-padding: 18;">
-            <columnConstraints>
-                <ColumnConstraints minWidth="150"/>
-                <ColumnConstraints hgrow="ALWAYS"/>
-            </columnConstraints>
+        <VBox spacing="8" style="-fx-padding: 0 18 18 18;">
+            <Label text="Inscripciones del socio" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+            <TableView fx:id="tblInscripciones" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colActividad"  text="Actividad"    prefWidth="220"/>
+                    <TableColumn fx:id="colEstado"     text="Estado"       prefWidth="100"/>
+                    <TableColumn fx:id="colPrecioAlta" text="Precio alta"  prefWidth="120"/>
+                    <TableColumn fx:id="colFechaAlta"  text="Fecha alta"   prefWidth="120"/>
+                    <TableColumn fx:id="colFechaBaja"  text="Fecha baja"   prefWidth="120"/>
+                </columns>
+                <placeholder><Label text="El socio no tiene inscripciones."/></placeholder>
+            </TableView>
 
-            <Label text="ID:"                GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtId"         GridPane.rowIndex="0" GridPane.columnIndex="1" editable="false"/>
-
-            <Label text="Apellido:"          GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtApellido"   GridPane.rowIndex="1" GridPane.columnIndex="1" editable="false"/>
-
-            <Label text="Nombre:"            GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtNombre"     GridPane.rowIndex="2" GridPane.columnIndex="1" editable="false"/>
-
-            <Label text="Documento:"         GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtDocumento"  GridPane.rowIndex="3" GridPane.columnIndex="1" editable="false"/>
-
-            <Label text="Estado:"            GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtEstado"     GridPane.rowIndex="4" GridPane.columnIndex="1" editable="false"/>
-        </GridPane>
+            <HBox spacing="8" alignment="CENTER_RIGHT">
+                <Button text="Registrar/Actualizar apto médico" onAction="#onAptoMedico"/>
+                <Button text="Inscribir en actividad" onAction="#onInscribir"/>
+                <Button text="Dar de baja inscripción" onAction="#onDarBaja"/>
+            </HBox>
+        </VBox>
     </center>
-
-    <bottom>
-        <HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-padding: 12 18;">
-            <Button text="Editar"                onAction="#editar"/>
-            <Button text="Inscribir en actividad" onAction="#inscribir"/>
-            <Button text="Ver inscripciones"     onAction="#verInscripciones"/>
-            <Button text="Registrar pago"        onAction="#registrarPago"/>
-            <Button text="Volver"                onAction="#volver"/>
-        </HBox>
-    </bottom>
 </BorderPane>

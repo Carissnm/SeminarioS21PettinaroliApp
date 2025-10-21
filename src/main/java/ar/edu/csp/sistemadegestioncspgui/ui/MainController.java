@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 
@@ -38,11 +39,17 @@ public class MainController {
         }
     }
 
+    private void mostrarEnDesarrollo(String nombre) {
+        new Alert(Alert.AlertType.INFORMATION,
+                "La funcionalidad '" + nombre + "' todavía no está disponible.\nSerá incorporada en la próxima versión.",
+                ButtonType.OK).showAndWait();
+    }
+
     // --- Handlers de menú/botones ---
     @FXML private void onSocios()      { Navigation.loadInMain("socios-menu-view.fxml", "Socios"); }
     @FXML private void onActividades() { Navigation.loadInMain("actividades-menu-view.fxml", "Actividades"); }
-    @FXML private void onPagos()       { Navigation.loadInMain("placeholder.fxml", "Pagos"); }
-    @FXML private void onReportes()    { Navigation.loadInMain("placeholder.fxml", "Reportes"); }
-    @FXML private void onConfig()      { Navigation.loadInMain("placeholder.fxml", "Configuración"); }
+    @FXML private void onPagos()       { mostrarEnDesarrollo("Pagos"); }
+    @FXML private void onReportes()    { mostrarEnDesarrollo("Reportes"); }
+    @FXML private void onConfig()      { mostrarEnDesarrollo("Configuración"); }
     @FXML private void onSalir()       { Platform.exit(); }
 }
