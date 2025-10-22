@@ -24,6 +24,8 @@
             <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
                 <TextField fx:id="txtSocioDni" onAction="#onBuscarSocioPorDni" promptText="DNI del socio" HBox.hgrow="ALWAYS"/>
                 <Button text="Buscar" onAction="#onBuscarSocioPorDni"/>
+                <Label fx:id="lblSocioSel"
+                       style="-fx-text-fill: #2e7d32; -fx-font-style: italic;"/>
             </HBox>
 
             <!-- Actividad -->

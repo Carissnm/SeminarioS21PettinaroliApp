@@ -79,6 +79,20 @@ public class InscripcionDaoImpl implements InscripcionDao {
         }
     }
 
+    private java.math.BigDecimal saldoInscripcion(long inscripcionId, java.sql.Connection cn) throws Exception {
+        try (var ps = cn.prepareStatement("""
+        SELECT COALESCE(SUM(importe),0) AS saldo
+          FROM movimiento_cuenta
+         WHERE inscripcion_id = ?
+    """)) {
+            ps.setLong(1, inscripcionId);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getBigDecimal("saldo");
+            }
+        }
+    }
+
     @Override
     public long inscribir(long socioId, long actividadId, BigDecimal precioUsado, String observacion) throws Exception {
         if (precioUsado == null || precioUsado.signum() <= 0)
@@ -91,16 +105,20 @@ public class InscripcionDaoImpl implements InscripcionDao {
         try (var cn = ds.getConnection()) {
             boolean origAuto = cn.getAutoCommit();
             try {
-                // ✅ Chequeo de apto vigente dentro de la misma conexión
+                // ⛔️ Nuevo: no permitir si el socio está INACTIVO
+                if (!socioActivo(socioId, cn))
+                    throw new IllegalStateException("El socio está INACTIVO. No se puede inscribir.");
+
+                // ✅ Chequeo de apto vigente
                 if (!aptoVigente(socioId, cn))
                     throw new IllegalStateException("El socio no posee apto médico vigente.");
 
                 cn.setAutoCommit(false);
 
                 try (var ps = cn.prepareStatement("""
-                    INSERT INTO inscripcion (socio_id, actividad_id, precio_alta, fecha_alta, estado)
-                    VALUES (?, ?, ?, CURRENT_DATE, 'ACTIVA')
-                """, Statement.RETURN_GENERATED_KEYS)) {
+                INSERT INTO inscripcion (socio_id, actividad_id, precio_alta, fecha_alta, estado)
+                VALUES (?, ?, ?, CURRENT_DATE, 'ACTIVA')
+            """, Statement.RETURN_GENERATED_KEYS)) {
                     ps.setLong(1, socioId);
                     ps.setLong(2, actividadId);
                     ps.setBigDecimal(3, precioUsado);
@@ -120,8 +138,6 @@ public class InscripcionDaoImpl implements InscripcionDao {
             }
         }
 
-        // Cargo en cuenta (fuera de la tx anterior; si querés transacción única,
-        // habría que permitir pasar el Connection al CuentaDao).
         var act = actDao.buscarPorId(actividadId)
                 .orElseThrow(() -> new IllegalArgumentException("Actividad inexistente"));
         String desc = (observacion == null || observacion.isBlank())
@@ -132,12 +148,48 @@ public class InscripcionDaoImpl implements InscripcionDao {
         return inscId;
     }
 
+    // Socio debe estar ACTIVO y sin fecha_baja
+    private boolean socioActivo(long socioId, Connection cn) throws Exception {
+        try (var ps = cn.prepareStatement("""
+        SELECT 1
+          FROM socio
+         WHERE id = ?
+           AND (estado = 'ACTIVO' OR estado IS NULL)
+           AND (fecha_baja IS NULL)
+         LIMIT 1
+    """)) {
+            ps.setLong(1, socioId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     @Override
     public boolean darDeBaja(long inscripcionId, LocalDate fechaBaja) throws Exception {
-        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(BAJA_SQL)) {
-            ps.setDate(1, java.sql.Date.valueOf(fechaBaja == null ? LocalDate.now() : fechaBaja));
-            ps.setLong(2, inscripcionId);
-            return ps.executeUpdate() > 0;
+        try (var cn = ds.getConnection()) {
+            cn.setAutoCommit(false);
+            try {
+                // ⛔️ Bloqueo si hay deuda asociada a esa inscripción
+                var saldo = saldoInscripcion(inscripcionId, cn);
+                if (saldo.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                    throw new IllegalStateException("No se puede dar de baja: hay deuda pendiente en esta actividad.");
+                }
+
+                try (var ps = cn.prepareStatement(BAJA_SQL)) {
+                    ps.setDate(1, java.sql.Date.valueOf(fechaBaja == null ? java.time.LocalDate.now() : fechaBaja));
+                    ps.setLong(2, inscripcionId);
+                    boolean ok = ps.executeUpdate() > 0;
+                    cn.commit();
+                    return ok;
+                }
+
+            } catch (Exception ex) {
+                try { cn.rollback(); } catch (Exception ignore) {}
+                throw ex;
+            } finally {
+                try { cn.setAutoCommit(true); } catch (Exception ignore) {}
+            }
         }
     }
 

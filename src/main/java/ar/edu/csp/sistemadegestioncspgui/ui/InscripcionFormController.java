@@ -21,9 +21,11 @@ public class InscripcionFormController {
 
     // ====== UI (fx:id deben existir en el FXML) ======
     @FXML private TextField txtSocioDni;
+    @FXML private Label lblSocioSel;
     @FXML private ComboBox<Actividad> cbActividad;
     @FXML private DatePicker dpFechaAlta;
-    @FXML private TextField txtPrecioAlta;   // solo lectura (precio_default)
+    @FXML private TextField txtPrecioAlta;
+    @FXML private Button btnGuardar;
 
     // ====== DAOs ======
     private final SocioDao socioDao = new SocioDaoImpl();
@@ -61,9 +63,10 @@ public class InscripcionFormController {
         var socioCtx = SelectionContext.getSocioActual();
         if (socioCtx != null) {
             this.socioSel = socioCtx;
-            if (txtSocioDni != null) {
-                txtSocioDni.setText(socioSel.getDni());
-            }
+            if (txtSocioDni != null) txtSocioDni.setText(socioSel.getDni());
+            pintarSocioSeleccionado();
+        } else {
+            pintarSocioSeleccionado();
         }
     }
 
@@ -96,7 +99,8 @@ public class InscripcionFormController {
 
     private void setSocioSeleccionado(Socio s) {
         this.socioSel = s;
-        txtSocioDni.setText(s.getDni());
+        if (txtSocioDni != null) txtSocioDni.setText(s.getDni());
+        pintarSocioSeleccionado();
     }
     /** ENTER dentro del TextField del DNI */
     @FXML
@@ -107,33 +111,29 @@ public class InscripcionFormController {
         try {
             var hallados = socioDao.buscarPorDni(dni);
             if (hallados.isEmpty()) {
+                socioSel = null; pintarSocioSeleccionado();
                 warn("No se encontró socio con ese DNI/prefijo.");
                 return;
             }
 
-            // 1) Intentar match exacto
+            // 1) Match exacto
             var exacto = hallados.stream().filter(s -> dni.equalsIgnoreCase(s.getDni())).findFirst();
-            if (exacto.isPresent()) {
-                setSocioSeleccionado(exacto.get());
-                return;
-            }
+            if (exacto.isPresent()) { setSocioSeleccionado(exacto.get()); return; }
 
             // 2) Si hay 1 solo, tomarlo
-            if (hallados.size() == 1) {
-                setSocioSeleccionado(hallados.get(0));
-                return;
-            }
+            if (hallados.size() == 1) { setSocioSeleccionado(hallados.get(0)); return; }
 
-            // 3) Si hay varios → ChoiceDialog dentro del form
+            // 3) Varios -> ChoiceDialog
             var opciones = hallados.stream()
                     .map(s -> s.getDni() + " - " + s.getApellido() + ", " + s.getNombre())
                     .toList();
-            ChoiceDialog<String> dialog = new ChoiceDialog<>(opciones.get(0), opciones);
-            dialog.setTitle("Seleccionar socio");
-            dialog.setHeaderText("Se encontraron varios socios");
-            dialog.setContentText("Elegí uno:");
-            dialog.showAndWait().ifPresent(sel -> {
-                // parsear DNI de la opción elegida (formato "dni - Apellido, Nombre")
+
+            var dlg = new ChoiceDialog<>(opciones.get(0), opciones);
+            dlg.setTitle("Seleccionar socio");
+            dlg.setHeaderText("Se encontraron varios socios");
+            dlg.setContentText("Elegí uno:");
+            dlg.showAndWait().ifPresent(sel -> {
+                // <-- ACÁ definimos dniElegido
                 String dniElegido = sel.split(" - ", 2)[0];
                 hallados.stream()
                         .filter(s -> s.getDni().equals(dniElegido))
@@ -145,6 +145,10 @@ public class InscripcionFormController {
             error("Error buscando socio:\n" + e.getMessage());
             e.printStackTrace();
         }
+    }
+    private void actualizarHabilitados() {
+        boolean ok = (socioSel != null && cbActividad != null && cbActividad.getValue() != null);
+        if (btnGuardar != null) btnGuardar.setDisable(!ok);
     }
 
     /** Botón “Buscar…” (ir a pantalla dedicada de búsqueda) */
@@ -184,6 +188,25 @@ public class InscripcionFormController {
         }
     }
 
+    private void pintarSocioSeleccionado() {
+        if (lblSocioSel == null) return;
+        if (socioSel == null) {
+            lblSocioSel.setText("");
+            lblSocioSel.setTooltip(null);
+            return;
+        }
+        String texto = String.format("%s (%s) – %s  |  Saldo: %s",
+                socioSel.getNombreCompleto(),
+                socioSel.getDni(),
+                socioSel.getEstado() == null ? "" : socioSel.getEstado().name(),
+                socioSel.getSaldo() == null ? "$0" : socioSel.getSaldo().toPlainString());
+        lblSocioSel.setText(texto);
+
+        var tip = new Tooltip(texto);
+        lblSocioSel.setTooltip(tip);
+    }
+
+
     // ====== Actividad seleccionada → precio_default al campo ======
     @FXML
     private void onActividadChange() {
@@ -204,6 +227,12 @@ public class InscripcionFormController {
             String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
             if (dni.isEmpty()) {
                 warn("Ingresá un DNI de socio válido.");
+                return;
+            }
+
+            if (socioSel == null) { warn("Seleccioná o buscá un socio."); return; }
+            if (socioSel.getEstado() != null && "INACTIVO".equals(socioSel.getEstado().name())) {
+                warn("El socio está INACTIVO. No se puede inscribir.");
                 return;
             }
 
@@ -268,7 +297,7 @@ public class InscripcionFormController {
     }
 
     // ====== Helpers ======
-    private void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private void warn(String m){ new Alert(Alert.AlertType.WARNING, m).showAndWait(); }
-    private void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
+    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
+    private static void warn(String m){ new Alert(Alert.AlertType.WARNING, m).showAndWait(); }
+    private static void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
 }
