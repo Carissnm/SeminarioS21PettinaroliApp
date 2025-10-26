@@ -16,7 +16,7 @@ import java.util.Locale;
 //Si viene de una actividad externa copia sus datos para la edición
 //Valida el nombre y el precio setteando activa por default
 //Persiste llamando a ActividadDao para crear si id=null o modificar si el id existe.
-public class ActividadFormController {
+public class ActividadFormController extends BaseController {
     //Campos del formulario inyectados de FXML
     @FXML private TextField txtNombre, txtDescripcion, txtPrecio;
     @FXML private ComboBox<EstadoActividad> cbEstado;
@@ -136,11 +136,6 @@ public class ActividadFormController {
     @FXML private void onCancelar(javafx.event.ActionEvent err) {
         ok = false;
         closeIfDialogOrNavigateBack();
-    }
-
-    //Alerta de validación
-    private void warn(String msg) {
-        new Alert(Alert.AlertType.WARNING, msg).showAndWait();
     }
 
     //Al estar embebido este metodo navega al menú actividades

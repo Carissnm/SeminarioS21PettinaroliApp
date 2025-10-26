@@ -211,15 +211,13 @@ public class SocioDaoImpl implements SocioDao {
     @Override
     public long crear(Socio s) throws SQLException {
         /* Se inserta un nuevo socio y se devuelve el id generado
-        * Primero se validan los campos requeridos, luego se ejecuta un insert para que la base
-        * de datos le asigne default al estado/fecha de alta. A continuación se lee la primary key generada
-        * y se registra un débito inicial de alta del club */
+         Primero se validan los campos requeridos, luego se ejecuta un insert para que la base
+         de datos le asigne default al estado/fecha de alta. A continuación se lee la primary key generada
+         y se registra un débito inicial de alta del club */
         long id; // se guarda el id para su uso a posteriori
         validarRequeridos(s);
-
         try (Connection con = ds.getConnection();
              PreparedStatement ps = con.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS)) {
-
             int i = 1;
             ps.setString(i++, s.getDni());
             ps.setString(i++, s.getNombre());
@@ -229,15 +227,12 @@ public class SocioDaoImpl implements SocioDao {
             ps.setString(i++, s.getEmail());
             ps.setString(i++, s.getTelefono());
             ps.setDate(i++, toDate(s.getFechaBaja()));
-
             int affected = ps.executeUpdate();
             if (affected == 0) throw new SQLException("No se insertó socio");
-
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
                     id = keys.getLong(1); //se guarda la pk autogenerada
                     s.setId(id); // se refleja en el objeto
-
                 } else {
                     throw new SQLException("No se obtuvo ID generado");
                 }
@@ -249,16 +244,13 @@ public class SocioDaoImpl implements SocioDao {
                 var monto = params.getNumero("CUOTA_INICIAL_CLUB")
                         .or(() -> params.getNumero("CUOTA_MENSUAL_CLUB"))
                         .orElse(BigDecimal.ZERO);
-
                 if (monto.signum() > 0) {
                     cuentaDao.registrarDebitoAltaClub(id, monto);
                 }
             } catch (Exception e) {
                 e.printStackTrace(); // Si falla el cargo se prioriza el alta del socio y no se revierte.
             }
-
             return id;
-
         }
     }
 
@@ -268,10 +260,8 @@ public class SocioDaoImpl implements SocioDao {
         //Si se actualiza al menos una fila devuelve true, y devuelve false si el id no existe.
         if (s == null || s.getId() == null) throw new IllegalArgumentException("Id requerido");
         validarRequeridos(s);
-
         try (Connection con = ds.getConnection();
              PreparedStatement ps = con.prepareStatement(UPDATE_SQL)) {
-
             int i = 1;
             ps.setString(i++, s.getDni());
             ps.setString(i++, s.getNombre());
@@ -284,7 +274,6 @@ public class SocioDaoImpl implements SocioDao {
             ps.setString(i++, (s.getEstado() == null ? EstadoSocio.ACTIVO : s.getEstado()).toDb());
             ps.setDate(i++, toDate(s.getFechaBaja()));
             ps.setLong(i, s.getId());
-
             return ps.executeUpdate() > 0;
         }
     }
@@ -303,23 +292,19 @@ public class SocioDaoImpl implements SocioDao {
                     cn.rollback();
                     throw new SQLException("El socio tiene deuda pendiente (saldo: " + saldo + "). No se puede dar de baja.");
                 }
-
                 // 2) Se dan de baja inscripciones ACTIVAS (para que no se siga cobrando)
                 try (PreparedStatement ps = cn.prepareStatement(SQL_BAJA_INSCRIPCIONES_ACTIVAS)) {
                     ps.setLong(1, id);
                     ps.executeUpdate();
                 }
-
                 // 3) Se realiza la Baja lógica del socio cambiando su estado a Inactivo
                 int updated;
                 try (PreparedStatement ps = cn.prepareStatement(SQL_BAJA_LOGICA_SOCIO)) {
                     ps.setLong(1, id);
                     updated = ps.executeUpdate();
                 }
-
                 cn.commit();
                 return updated > 0;
-
             } catch (SQLException ex) {
                 // Frente a cualquier error se revierte todo lo previo.
                 cn.rollback();

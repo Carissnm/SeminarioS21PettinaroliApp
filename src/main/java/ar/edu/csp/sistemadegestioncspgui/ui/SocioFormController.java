@@ -10,7 +10,6 @@ import javafx.scene.control.*;
 
 // Controlador del formulario del socio, tanto para Edición de un socio existente como para el Alta del socio nuevo
 public class SocioFormController extends BaseController {
-
     // Inyección de controles
     @FXML private TextField txtDni, txtApellido, txtNombre, txtEmail, txtTelefono, txtDomicilio;
     @FXML private DatePicker dpFechaNac, dpFechaBaja;
@@ -18,7 +17,6 @@ public class SocioFormController extends BaseController {
     @FXML private Button btnGuardar, btnCancelar;
     @FXML private CheckBox chkApto;
     @FXML private DatePicker dpAptoEmision;
-
     // Objetos DAO que encapsulan la lógica de acceso a la base de datos.
     // Se usan para crear/actualizar socios y registrar aptos médicos.
     private final AptoMedicoDao aptoDao = new AptoMedicoDaoImpl();
@@ -70,7 +68,6 @@ public class SocioFormController extends BaseController {
         try {
             // Toma los datos de la Interfaz de Usuario y los valida en el modelo
             dumpFormToModel();
-
             // Para la persistencia, si no tiene Id lo crea y si existe lo actualiza
             if (socio.getId() == null) {
                 long id = socioDao.crear(socio);
@@ -79,7 +76,6 @@ public class SocioFormController extends BaseController {
                 socioDao.actualizar(socio);
             }
             saved = true;
-
             // Si el administrador marcó que se entrega un apto se hace un upsert del apto médico
             if (chkApto != null && chkApto.isSelected()) {
                 var emision = (dpAptoEmision.getValue() == null ? java.time.LocalDate.now() : dpAptoEmision.getValue());
@@ -88,15 +84,12 @@ public class SocioFormController extends BaseController {
                     aptoDao.upsertApto(socio.getId(), emision, venc);
                 } catch (Exception ex) {
                     //Si falla la carga del apto médico aún así se continúa con el proceso de alta/edición, no se revierte.
-                    error("El socio se guardó, pero no pude registrar el apto médico:\n" + ex.getMessage());
+                    error("El socio fue registrado, pero no fue posible registrar el apto médico:\n" + ex.getMessage());
                 }
             }
-
-
             // Se vuelve al menú principal de Socios con mensaje de éxito
             info("Los datos del socio fueron guardados correctamente.");
             Navigation.loadInMain("/socios-menu-view.fxml", "Socios");
-
         } catch (Exception e) {
             error("No fue posible guardar:\n" + e.getMessage());
             e.printStackTrace();

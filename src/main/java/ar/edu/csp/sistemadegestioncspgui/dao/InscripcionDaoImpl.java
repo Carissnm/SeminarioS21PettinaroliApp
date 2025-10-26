@@ -15,10 +15,8 @@ import java.util.Optional;
 public class InscripcionDaoImpl implements InscripcionDao {
     //Pool de conexiones de la base de datos centralizado
     private final DataSource ds = DataSourceFactory.get();
-
     //DAO auxiliar para registrar cargos/débitos asociados a la inscripción
     private final CuentaDao cuentaDao = new CuentaDaoImpl();
-
     //DAO auxiliar para obtener datos de la actividad
     private final ActividadDao actDao  = new ActividadDaoImpl();
 

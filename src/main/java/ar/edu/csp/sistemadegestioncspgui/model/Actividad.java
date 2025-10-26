@@ -15,7 +15,6 @@ public class Actividad {
     //Constructor vacío para frameworks, mapeos y JavaFX
     public Actividad() {
     }
-
     // Constructor para crear instancias en memoria previo a la persistencia
     public Actividad(String nombre, String descripcion, EstadoActividad estado, BigDecimal precioDefault) {
         this.nombre = nombre;
@@ -23,13 +22,10 @@ public class Actividad {
         this.estado = estado;
         this.precioDefault = precioDefault;
     }
-
     // ====== GETTERS Y SETTERS ====== //
-
     public Long getId() {
         return id;
     }
-
     public void setId(Long id) {
         this.id = id;
     }
