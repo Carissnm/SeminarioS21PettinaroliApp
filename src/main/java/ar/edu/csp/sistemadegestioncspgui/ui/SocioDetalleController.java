@@ -6,22 +6,24 @@ import ar.edu.csp.sistemadegestioncspgui.dao.InscripcionDao;
 import ar.edu.csp.sistemadegestioncspgui.dao.InscripcionDaoImpl;
 import ar.edu.csp.sistemadegestioncspgui.model.Inscripcion;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
 
+// Controlador de la pantalla de detalle del socio
 public class SocioDetalleController {
 
-    @FXML private Label lblNombre;            // Apellido, Nombre (DNI)
-    @FXML private Label lblEmailTel;          // Email / Teléfono
-    @FXML private Label lblEstadoSaldo;       // Estado / Saldo
+    // Inyección de controles
+    //Labels para el encabezado
+    @FXML private Label lblNombre;
+    @FXML private Label lblEmailTel;
+    @FXML private Label lblEstadoSaldo;
+
+    //Tablas de inscripciones
     @FXML private TableView<Inscripcion> tblInscripciones;
     @FXML private TableColumn<Inscripcion, String> colActividad;
     @FXML private TableColumn<Inscripcion, String> colEstado;
@@ -29,27 +31,33 @@ public class SocioDetalleController {
     @FXML private TableColumn<Inscripcion, String> colFechaAlta;
     @FXML private TableColumn<Inscripcion, String> colFechaBaja;
 
+    //DAO's de soporte para la actualización/creación instancias de las distintas clases.
     private final AptoMedicoDao aptoDao = new AptoMedicoDaoImpl();
     private final InscripcionDao inscDao = new InscripcionDaoImpl();
+
+    //Socio seteado en la vista previa
     private Socio socio;
+
+    //Formateadores
     private final DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final NumberFormat money = NumberFormat.getCurrencyInstance(new Locale("es","AR"));
 
     @FXML
     public void initialize() {
+        // Obtención del socio previamente seleccionado. Si no está se vuelve a la lista
         socio = SelectionContext.getSocioActual();
         if (socio == null) {
             new Alert(Alert.AlertType.WARNING, "No hay socio seleccionado.").showAndWait();
             Navigation.backOr("/socios-list-view.fxml", "Socios");
             return;
         }
-        // Header
+        // Header con los datos principales del socio
         lblNombre.setText(socio.getApellido() + ", " + socio.getNombre() + " (" + socio.getDni() + ")");
         lblEmailTel.setText(nv(socio.getEmail()) + " / " + nv(socio.getTelefono()));
         lblEstadoSaldo.setText((socio.getEstado()==null? "" : socio.getEstado().name()) +
                 "  |  Saldo: " + (socio.getSaldo()==null ? money.format(0) : money.format(socio.getSaldo())));
 
-        // Tabla
+        // CONFIGURACIÓN DE COLUMNAS DE LA TABLA
         colActividad.setCellValueFactory(c -> new SimpleStringProperty(nv(c.getValue().getActividadNombre())));
         colEstado.setCellValueFactory(c -> new SimpleStringProperty(
                 c.getValue().getEstado()==null ? "" : c.getValue().getEstado().name()));
@@ -60,9 +68,11 @@ public class SocioDetalleController {
         colFechaBaja.setCellValueFactory(c -> new SimpleStringProperty(
                 c.getValue().getFechaBaja()==null ? "" : df.format(c.getValue().getFechaBaja())));
 
+        //Carga inicial de las inscripciones.
         cargarInscripciones();
     }
 
+    //Metodo que permite leer inscripciones del DAO y deja solo las actividades en estado activa en la tabla visible.
     private void cargarInscripciones() {
         try {
             var lista = inscDao.listarPorSocio(socio.getId());
@@ -72,14 +82,15 @@ public class SocioDetalleController {
                     .toList();
             tblInscripciones.getItems().setAll(activas);
         } catch (Exception e) {
-            new Alert(Alert.AlertType.ERROR, "No se pudieron cargar inscripciones:\n" + e.getMessage()).showAndWait();
+            new Alert(Alert.AlertType.ERROR, "No fue posible cargar inscripciones:\n" + e.getMessage()).showAndWait();
             e.printStackTrace();
         }
     }
 
+    // Navegación al menú de inscripciones con el socio ya dentro del contexto
     @FXML
     private void onInscribir() {
-        // Dejo el socio en el contexto y voy al form
+        // Deja el socio en el contexto y se va al form
         SelectionContext.setSocioActual(socio);
         Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
     }
@@ -87,21 +98,24 @@ public class SocioDetalleController {
     @FXML
     private void onDarBaja() {
         var sel = tblInscripciones.getSelectionModel().getSelectedItem();
-        if (sel == null) { info("Seleccioná una inscripción."); return; }
+        if (sel == null) { info("Seleccione una inscripción."); return; }
 
-        if (sel.getFechaBaja() != null) { info("La inscripción ya está dada de baja."); return; }
+        if (sel.getFechaBaja() != null) {
+            info("La inscripción fue dada de baja con éxito.");
+            return;
+        }
 
         var conf = new Alert(Alert.AlertType.CONFIRMATION,
-                "¿Dar de baja la inscripción a " + sel.getActividadNombre() + "?", ButtonType.YES, ButtonType.NO);
+                "¿Desea dar de baja la inscripción a " + sel.getActividadNombre() + "?", ButtonType.YES, ButtonType.NO);
         conf.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.YES) {
                 try {
                     boolean ok = inscDao.darDeBaja(sel.getId(), java.time.LocalDate.now());
                     if (ok) {
-                        cargarInscripciones(); info("Inscripción dada de baja.");
+                        cargarInscripciones(); info("Inscripción dada de baja con éxito.");
                     }
                     else {
-                        info("No se pudo dar de baja.");
+                        info("No fue posible dar de baja la inscripción.");
                     }
                 } catch (Exception e) {
                     error("Error al dar de baja:\n" + e.getMessage());
@@ -110,13 +124,14 @@ public class SocioDetalleController {
         });
     }
 
+    //Metodo que permite registrar/actualizar el apto médico de un socio.
     @FXML
     private void onAptoMedico() {
-        // pedir fecha de emisión, vencimiento = emision.plusYears(1)
+        // Solicita fecha de emisión y calcula el vencimiento un año después de la misma.
         var dialog = new javafx.scene.control.Dialog<javafx.scene.control.ButtonType>();
         var dp = new javafx.scene.control.DatePicker(LocalDate.now());
         dialog.setTitle("Apto médico");
-        dialog.setHeaderText("Elegí fecha de emisión (vigencia: 1 año)");
+        dialog.setHeaderText("Ingrese fecha de emisión (vigencia: 1 año)");
         dialog.getDialogPane().setContent(dp);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
@@ -127,7 +142,7 @@ public class SocioDetalleController {
                 var venc = emision.plusYears(1);
                 try {
                     aptoDao.upsertApto(socio.getId(), emision, venc);
-                    info("Apto registrado. Vence el " + venc.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                    info("Apto registrado con éxito. Vence el " + venc.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
                 } catch (Exception e) { error("No se pudo registrar:\n" + e.getMessage()); }
             }
         });

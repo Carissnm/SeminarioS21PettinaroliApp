@@ -10,16 +10,18 @@ import ar.edu.csp.sistemadegestioncspgui.model.Actividad;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
+//Controlador del formulario de alta para la inscripción de un socio a una actividad.
+//Permite ingresar/buscar un socio por DNI, cargar y listar las actividades activas
+//Mostrar la fecha de alta (del día de la inscripción por defecto) y el precio de alta de la actividad
+//Valida reglas básicas antes de inscribir y ejecuta la inscripción además de registar el cargo en la cuenta del socio.
 public class InscripcionFormController {
 
-    // ====== UI (fx:id deben existir en el FXML) ======
+    // Inyección desde FXML
     @FXML private TextField txtSocioDni;
     @FXML private Label lblSocioSel;
     @FXML private ComboBox<Actividad> cbActividad;
@@ -35,7 +37,7 @@ public class InscripcionFormController {
     // ====== Estado ======
     private Socio socioSel;  // socio seleccionado/encontrado
 
-    // ====== Init ======
+    // ====== Inicialización ======
     @FXML
     public void initialize() {
         Navigation.setSectionTitle("Socios");
@@ -46,42 +48,44 @@ public class InscripcionFormController {
             txtSocioDni.setDisable(false);
         }
 
-        // Fecha por defecto = hoy
+        // Fecha por defecto = fecha en la que se está realizando la inscripción
         if (dpFechaAlta != null && dpFechaAlta.getValue() == null) {
             dpFechaAlta.setValue(LocalDate.now());
         }
 
-        // Precio de alta es informativo: viene de la actividad
+        // El precio de alta de la actividad es informativo y no se puede editar desde este campo.
         if (txtPrecioAlta != null) {
             txtPrecioAlta.setEditable(false);
         }
 
-        // Cargar actividades ACTIVAS
+        // Carga de actividades ACTIVAS
         cargarActividades();
 
-        // Si vengo del detalle, tomar el socio del contexto
+        // Si se viene desde el detalle del socio se toma el socio del contexto
         var socioCtx = SelectionContext.getSocioActual();
         if (socioCtx != null) {
             this.socioSel = socioCtx;
             if (txtSocioDni != null) txtSocioDni.setText(socioSel.getDni());
             pintarSocioSeleccionado();
         } else {
-            pintarSocioSeleccionado();
+            pintarSocioSeleccionado(); //se limpia si no hay socio
         }
     }
 
+    //Carga de actividades con estado Activa y configuración del render del ComboBox para mostrar solo el nombre.
     private void cargarActividades() {
         try {
             List<Actividad> actList = actividadDao.listarActivas();
             cbActividad.getItems().setAll(actList);
 
-            // Render bonito: nombre en lista/botón
+            // Render de los items del combo
             cbActividad.setCellFactory(lv -> new ListCell<>() {
                 @Override protected void updateItem(Actividad a, boolean empty) {
                     super.updateItem(a, empty);
                     setText(empty || a == null ? "" : a.getNombre());
                 }
             });
+            // Render del botón (elemento seleccionado) del combo
             cbActividad.setButtonCell(new ListCell<>() {
                 @Override protected void updateItem(Actividad a, boolean empty) {
                     super.updateItem(a, empty);
@@ -90,23 +94,24 @@ public class InscripcionFormController {
             });
 
         } catch (Exception e) {
-            error("No se pudieron cargar las actividades:\n" + e.getMessage());
+            error("No fue posible cargar las actividades:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
 
     // ====== Búsqueda de socio ======
 
+    //Setter de selección y reflejo en la Interfaz de Usuario
     private void setSocioSeleccionado(Socio s) {
         this.socioSel = s;
         if (txtSocioDni != null) txtSocioDni.setText(s.getDni());
         pintarSocioSeleccionado();
     }
-    /** ENTER dentro del TextField del DNI */
+    //El metodo onBuscarSocioPorDni() ejecuta la búsqueda parcial por prefijo del dni de un socio.
     @FXML
     private void onBuscarSocioPorDni() {
         String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
-        if (dni.isEmpty()) { warn("Ingresá un DNI (o prefijo) para buscar."); return; }
+        if (dni.isEmpty()) { warn("Ingrese un DNI (o prefijo) para buscar."); return; }
 
         try {
             var hallados = socioDao.buscarPorDni(dni);
@@ -116,14 +121,20 @@ public class InscripcionFormController {
                 return;
             }
 
-            // 1) Match exacto
+            // 1) Coincidencia exacta
             var exacto = hallados.stream().filter(s -> dni.equalsIgnoreCase(s.getDni())).findFirst();
-            if (exacto.isPresent()) { setSocioSeleccionado(exacto.get()); return; }
+            if (exacto.isPresent()) {
+                setSocioSeleccionado(exacto.get());
+                return;
+            }
 
-            // 2) Si hay 1 solo, tomarlo
-            if (hallados.size() == 1) { setSocioSeleccionado(hallados.get(0)); return; }
+            // 2) Si hay un único resultado se toma
+            if (hallados.size() == 1) {
+                setSocioSeleccionado(hallados.get(0));
+                return;
+            }
 
-            // 3) Varios -> ChoiceDialog
+            // 3) Si existen varias opciones en la lista se muestra un ChoiceDialog para elegir
             var opciones = hallados.stream()
                     .map(s -> s.getDni() + " - " + s.getApellido() + ", " + s.getNombre())
                     .toList();
@@ -131,9 +142,9 @@ public class InscripcionFormController {
             var dlg = new ChoiceDialog<>(opciones.get(0), opciones);
             dlg.setTitle("Seleccionar socio");
             dlg.setHeaderText("Se encontraron varios socios");
-            dlg.setContentText("Elegí uno:");
+            dlg.setContentText("Elija uno:");
             dlg.showAndWait().ifPresent(sel -> {
-                // <-- ACÁ definimos dniElegido
+                // Dni elegido antes de " - "
                 String dniElegido = sel.split(" - ", 2)[0];
                 hallados.stream()
                         .filter(s -> s.getDni().equals(dniElegido))
@@ -142,30 +153,29 @@ public class InscripcionFormController {
             });
 
         } catch (Exception e) {
-            error("Error buscando socio:\n" + e.getMessage());
+            error("Error en la búsqueda del socio:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    // Habilita/Deshabilita el botón Guardar en función de que haya socio y actividad seleccionados
     private void actualizarHabilitados() {
         boolean ok = (socioSel != null && cbActividad != null && cbActividad.getValue() != null);
         if (btnGuardar != null) btnGuardar.setDisable(!ok);
     }
 
-    /** Botón “Buscar…” (ir a pantalla dedicada de búsqueda) */
-    @FXML
-    private void onBuscarSocio() {
-        Navigation.loadInMain("/socios-buscar-view.fxml", "Socios");
-    }
 
+    //Búsqueda de socio por dni
     private void buscarSocioPorDni() {
         String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
-        if (dni.isEmpty()) { warn("Ingresá un DNI para buscar."); return; }
+        if (dni.isEmpty()) { warn("Ingrese un DNI para buscar."); return; }
 
         try {
             List<Socio> hallados = socioDao.buscarPorDni(dni);
-            if (hallados.isEmpty()) { warn("No se encontró socio con ese DNI/prefijo."); return; }
-
-            // Preferir match exacto; si no hay, usar único resultado; si hay varios, pedir búsqueda avanzada
+            if (hallados.isEmpty()) {
+                warn("No se encontró ningún socio con ese DNI/prefijo.");
+                return;
+            }
             Optional<Socio> exacto = hallados.stream()
                     .filter(s -> dni.equalsIgnoreCase(s.getDni()))
                     .findFirst();
@@ -175,19 +185,20 @@ public class InscripcionFormController {
             } else if (hallados.size() == 1) {
                 socioSel = hallados.get(0);
             } else {
-                warn("Se encontraron varios socios para ese prefijo. Usá el botón Buscar…");
+                warn("Se encontraron varios socios para ese prefijo. Utilice el botón Buscar…");
                 return;
             }
 
-            // Mostrar el DNI confirmado (si querés, podrías mostrar apellido/nombre en otro campo)
+            // Se muestra el DNI confirmado
             txtSocioDni.setText(socioSel.getDni());
 
         } catch (Exception e) {
-            error("Error buscando socio:\n" + e.getMessage());
+            error("Error en la búsqueda del socio:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    // Este metodo muestra un resumen del socio seleccionado
     private void pintarSocioSeleccionado() {
         if (lblSocioSel == null) return;
         if (socioSel == null) {
@@ -207,36 +218,35 @@ public class InscripcionFormController {
     }
 
 
-    // ====== Actividad seleccionada → precio_default al campo ======
     @FXML
     private void onActividadChange() {
         Actividad a = cbActividad.getValue();
         if (a == null || a.getPrecioDefault() == null) {
             txtPrecioAlta.setText("");
         } else {
-            // Mostrar precio tal cual (podrías formatear si preferís)
+            // Se muestra el precio como figura en la base de datos
             txtPrecioAlta.setText(a.getPrecioDefault().toPlainString());
         }
     }
 
-    // ====== Guardar inscripción ======
+    // Metodo para registrar la inscripción de un socio a una determinada actividad.
     @FXML
     private void onGuardarInscripcion() {
         try {
-            // 1️⃣ Validar DNI del socio
+            // Validación del DNI del socio
             String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
             if (dni.isEmpty()) {
-                warn("Ingresá un DNI de socio válido.");
+                warn("Ingrese un DNI de socio válido.");
                 return;
             }
 
-            if (socioSel == null) { warn("Seleccioná o buscá un socio."); return; }
+            if (socioSel == null) { warn("Seleccione o busque un socio."); return; }
             if (socioSel.getEstado() != null && "INACTIVO".equals(socioSel.getEstado().name())) {
-                warn("El socio está INACTIVO. No se puede inscribir.");
+                warn("El socio se encuentra INACTIVO. No es posible su inscripción.");
                 return;
             }
 
-            // 2️⃣ Buscar el socio en base de datos
+            // Búsqueda del socio en la base de datos
             List<Socio> hallados = socioDao.buscarPorDni(dni);
             if (hallados.isEmpty()) {
                 warn("No existe ningún socio con ese DNI.");
@@ -257,10 +267,10 @@ public class InscripcionFormController {
                 return;
             }
 
-            // 3️⃣ Validar actividad
+            // Validación de la actividad
             Actividad act = cbActividad.getValue();
             if (act == null) {
-                warn("Seleccioná una actividad.");
+                warn("Seleccione una actividad.");
                 return;
             }
 
@@ -269,28 +279,32 @@ public class InscripcionFormController {
 
             BigDecimal precio = act.getPrecioDefault();
             if (precio == null || precio.signum() <= 0) {
-                warn("La actividad no tiene precio configurado.");
+                warn("La actividad no posee precio configurado.");
                 return;
             }
 
-            // 4️⃣ Intentar inscribir
+            // Inscripción. El DAO valida el apto vigente y el estado del socio.
             inscripcionDao.inscribir(socioSel.getId(), act.getId(), precio, "Inscripción a " + act.getNombre());
 
             info("Inscripción realizada con éxito.");
             Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
 
         } catch (IllegalStateException ex) {
+            //Frente a reglas de negocio fallidas
             error(ex.getMessage());
         } catch (Exception e) {
-            error("No se pudo inscribir:\n" + e.getMessage());
+            error("No fue posible realizar la inscripción:\n" + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    //Para regresar a la pantalla anterior o a Home si no hay historial
     @FXML
     private void onVolver() {
         Navigation.backOr("/home-view.fxml", "Socios");
     }
 
+    //Permite cancelar el flujo y volver al menú de inscripciones.
     @FXML
     private void onCancelar() {
         Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");

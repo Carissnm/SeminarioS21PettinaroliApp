@@ -12,18 +12,25 @@ import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.Locale;
-
+//Controlador que carga los estados posibles en el ComboBox y settea el render con toLabel()
+//Si viene de una actividad externa copia sus datos para la edición
+//Valida el nombre y el precio setteando activa por default
+//Persiste llamando a ActividadDao para crear si id=null o modificar si el id existe.
 public class ActividadFormController {
+    //Campos del formulario inyectados de FXML
     @FXML private TextField txtNombre, txtDescripcion, txtPrecio;
     @FXML private ComboBox<EstadoActividad> cbEstado;
 
+    //Acceso a los Datos de la actividad
     private final ActividadDao actividadDao = new ActividadDaoImpl();
 
-    private Actividad actividad; // copia editable
+    //Estado interno
+    private Actividad actividad; // copia editable que se asegura con ensureActividad()
     private boolean ok;
 
     @FXML
     private void initialize() {
+        //Carga de los estados ene l combo y renderización con etiquetas
         cbEstado.getItems().setAll(EstadoActividad.values());
         cbEstado.setButtonCell(new ListCell<>() {
             @Override protected void updateItem(EstadoActividad item, boolean empty) {
@@ -37,12 +44,13 @@ public class ActividadFormController {
                 setText(empty || item==null ? "" : item.toLabel());
             }
         });
-
+        //En el caso en el que nadie cargó una actividad aún se crea una por defecto.
         ensureActividad();
+        //Estado por defecto como Activa si el administrador no la elige.
         if (cbEstado.getValue() == null) cbEstado.setValue(EstadoActividad.ACTIVA);
     }
 
-    /** Si nadie llamó setActividad(...) (alta embebida), aseguramos un objeto nuevo. */
+    // Garantiza qeu haya un objeto Actividad editable con valores por defecto.
     private void ensureActividad() {
         if (this.actividad == null) {
             this.actividad = new Actividad();
@@ -51,7 +59,7 @@ public class ActividadFormController {
         }
     }
 
-    /** Para edición: el caller puede pasar la actividad a editar. */
+    //Carga datos para la edición. Se usa una copia para no tocar el objeto externo de manera directa.
     public void setActividad(Actividad a) {
         this.actividad = (a==null? new Actividad() : copy(a));
         if (a != null) {
@@ -64,6 +72,7 @@ public class ActividadFormController {
         }
     }
 
+    //Creación de una copia preventiva para evitar daños colaterales sobre la instancia original.
     private Actividad copy(Actividad a) {
         Actividad x = new Actividad();
         x.setId(a.getId());
@@ -76,10 +85,11 @@ public class ActividadFormController {
         return x;
     }
 
-    @FXML private void onGuardar() {
+    //Guardado (de creación en caso de Alta de una actividad o modificación de una actividad preexistente) tras la validación de los inputs.
+    @FXML private void onGuardar(javafx.event.ActionEvent err) {
         try {
             ensureActividad();
-
+            //Validaciones mínimas.
             if (txtNombre.getText()==null || txtNombre.getText().trim().isEmpty()) {
                 warn("El nombre es obligatorio"); return;
             }
@@ -90,12 +100,13 @@ public class ActividadFormController {
                 if (precio.signum() < 0) { warn("El precio no puede ser negativo"); return; }
             } catch (NumberFormatException nfe) { warn("Precio inválido"); return; }
 
+            //Modelado de los datos finales.
             actividad.setNombre(txtNombre.getText().trim());
             actividad.setDescripcion(txtDescripcion.getText()==null? "" : txtDescripcion.getText().trim());
             actividad.setPrecioDefault(precio);
             actividad.setEstado(cbEstado.getValue()==null? EstadoActividad.ACTIVA : cbEstado.getValue());
 
-            // 🔸 PERSISTENCIA REAL
+            // Persistencia
             if (actividad.getId() == null) {
                 long id = actividadDao.crear(actividad);
                 actividad.setId(id);
@@ -112,23 +123,28 @@ public class ActividadFormController {
                             "• Precio: " + f.format(actividad.getPrecioDefault()))
                     .showAndWait();
 
-            // Volvemos al menú de actividades (embebido)
+            // Se cierra si es diálogo o se navega al menú de actividades cuadno está embebido.
             closeIfDialogOrNavigateBack();
 
         } catch (Exception e) {
-            new Alert(Alert.AlertType.ERROR, "No se pudo guardar:\n" + e.getMessage()).showAndWait();
+            new Alert(Alert.AlertType.ERROR, "No fue posible guardar:\n" + e.getMessage()).showAndWait();
             e.printStackTrace();
         }
     }
 
-    @FXML private void onCancelar() {
+    //Cancelación del alta o la modificación de una actividad.
+    @FXML private void onCancelar(javafx.event.ActionEvent err) {
         ok = false;
         closeIfDialogOrNavigateBack();
     }
 
-    private void warn(String msg) { new Alert(Alert.AlertType.WARNING, msg).showAndWait(); }
+    //Alerta de validación
+    private void warn(String msg) {
+        new Alert(Alert.AlertType.WARNING, msg).showAndWait();
+    }
 
-    /** Cierra solo si es diálogo; si no, vuelve al menú Actividades en la ventana principal. */
+    //Al estar embebido este metodo navega al menú actividades
+    //si corriera como diálogo modal se cerraría el cuadro de diálogo.
     private void closeIfDialogOrNavigateBack() {
         Window w = txtNombre.getScene() != null ? txtNombre.getScene().getWindow() : null;
         if (w instanceof Stage s && s.getOwner() != null) {
@@ -138,6 +154,7 @@ public class ActividadFormController {
         }
     }
 
+    //Para cuadro de diálogo modal.
     public boolean isOk() { return ok; }
     public Actividad getResultado() { return actividad; }
 }

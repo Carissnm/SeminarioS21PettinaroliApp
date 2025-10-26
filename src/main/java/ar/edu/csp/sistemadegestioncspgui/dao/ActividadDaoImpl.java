@@ -13,33 +13,43 @@ import java.util.Optional;
 
 public class ActividadDaoImpl implements ActividadDao {
 
+    //Pool de conexiones de la base de datos centralizado
     private final DataSource ds = DataSourceFactory.get();
 
+    // Permite traer todos los campos relevantes de una actividad.
     private static final String SELECT_BASE = """
         SELECT id, nombre, descripcion, estado, precio_default, creado_en, actualizado_en
         FROM actividad
         """;
-    private static final String SELECT_TODAS   = SELECT_BASE + " ORDER BY nombre";
-    private static final String SELECT_ACTIVAS = SELECT_BASE + " WHERE estado = 'ACTIVA' OR estado IS NULL ORDER BY nombre";
-    private static final String SELECT_BY_ID   = SELECT_BASE + " WHERE id = ?";
 
+    // Permite seleccionar todas las actividades y listarlas ordenadas por nombre.
+    private static final String SELECT_TODAS = SELECT_BASE + " ORDER BY nombre";
+    // Selecciona y muestra solo las actividades con estado Activa, ordenadas por nombre.
+    private static final String SELECT_ACTIVAS = SELECT_BASE + " WHERE estado = 'ACTIVA' OR estado IS NULL ORDER BY nombre";
+    // Permite una búsqueda puntual por id.
+    private static final String SELECT_BY_ID = SELECT_BASE + " WHERE id = ?";
+    // Permite insertar una nueva actividad.
     private static final String INSERT_SQL = """
         INSERT INTO actividad (nombre, descripcion, estado, precio_default, creado_en, actualizado_en)
         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """;
+    // Actualiza todos los campos editables.
     private static final String UPDATE_SQL = """
         UPDATE actividad
            SET nombre = ?, descripcion = ?, estado = ?, precio_default = ?, actualizado_en = CURRENT_TIMESTAMP
          WHERE id = ?
         """;
+    // Permite cambiar el estado.
     private static final String UPDATE_ESTADO = """
         UPDATE actividad SET estado = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?
         """;
+    // Permite cambiar el precio
     private static final String UPDATE_PRECIO = """
         UPDATE actividad SET precio_default = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?
         """;
 
-
+    // A través de un mapeo se transforma la fila de la tabla de la base de datos
+    // en un objeto det ipo Actividad.
     private Actividad map(ResultSet rs) throws SQLException {
         var a = new Actividad();
         a.setId(rs.getLong("id"));
@@ -54,7 +64,7 @@ public class ActividadDaoImpl implements ActividadDao {
         return a;
     }
 
-    // ---------- lecturas ----------
+    // Devuelve toda slas actividades, tanto activas como inactivas, ordenadas por nombre.
     @Override
     public List<Actividad> listarTodas() throws Exception {
         try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SELECT_TODAS); var rs = ps.executeQuery()) {
@@ -64,6 +74,7 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
+    // Devuelve una lista con las actividades activas, ordenadas por nombre.
     @Override
     public List<Actividad> listarActivas() throws Exception {
         try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SELECT_ACTIVAS); var rs = ps.executeQuery()) {
@@ -73,6 +84,7 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
+    //Permite buscar actividad por su id.
     @Override
     public Optional<Actividad> buscarPorId(long id) throws Exception {
         try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SELECT_BY_ID)) {
@@ -83,7 +95,8 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
-    // ---------- escrituras ----------
+    // Este metodo permite la creación de una nuev aactividad
+    // y su inserción en la base de datos.
     @Override
     public long crear(Actividad a) throws Exception {
         if (a.getEstado() == null) a.setEstado(EstadoActividad.ACTIVA);
@@ -101,6 +114,7 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
+    // Metodo para la actualización/modificación de los datos de una actividad.
     @Override
     public boolean actualizar(Actividad a) throws Exception {
         if (a.getId() == null) throw new IllegalArgumentException("Actividad sin id");
@@ -115,6 +129,8 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
+    // Este metodo permite modificar el estado de una actividad. Se toma un estado Activo por defecto
+    // si el estado ingresa como null.
     @Override
     public boolean cambiarEstado(long id, EstadoActividad est) throws Exception {
         try (var cn = ds.getConnection(); var ps = cn.prepareStatement(UPDATE_ESTADO)) {
@@ -124,6 +140,7 @@ public class ActividadDaoImpl implements ActividadDao {
         }
     }
 
+    // Permite actualizar el precio por default de una actividad.
     @Override
     public boolean actualizarPrecio(long id, java.math.BigDecimal nuevoPrecio) throws Exception {
         try (var cn = ds.getConnection(); var ps = cn.prepareStatement(UPDATE_PRECIO)) {

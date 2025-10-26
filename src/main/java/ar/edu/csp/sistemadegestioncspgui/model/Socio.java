@@ -4,8 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
+// Clase que modela un Socio del club
 public class Socio {
-    private Long id;
+    private Long id; // Primary Key autogenerada por la base de datos
     private String dni;
     private String nombre;
     private String apellido;
@@ -13,15 +14,15 @@ public class Socio {
     private String domicilio;
     private String email;
     private String telefono;
-    private EstadoSocio estado = EstadoSocio.ACTIVO; // default seguro
+    private EstadoSocio estado = EstadoSocio.ACTIVO; // Estado lógico, activo por default
     private LocalDate fechaAlta;
     private LocalDate fechaBaja;
-    private BigDecimal saldo; // <<-- transitorio, solo para mostrar en UI
+    private BigDecimal saldo; // Saldo para mostrar en la Interfaz del Usuario
 
-    // --- Constructores ---
+    // Constructor para su uso por frameworks, mapeos y JavaFX
     public Socio() {}
 
-    /** Para crear un socio nuevo (sin id todavía). */
+    // Constructor para instanciar un nuevo socio al momento del alta.
     public Socio(String dni, String nombre, String apellido,
                  LocalDate fechaNac, String domicilio, String email,
                  String telefono, EstadoSocio estado, LocalDate fechaAlta, LocalDate fechaBaja) {
@@ -37,47 +38,92 @@ public class Socio {
         this.fechaBaja = fechaBaja;
     }
 
-    /** Constructor completo (incluye id). */
+    // Constructor que instancia un objeto Socio completo (con id incluido)
     public Socio(Long id, String dni, String nombre, String apellido,
                  LocalDate fechaNac, String domicilio, String email,
                  String telefono, EstadoSocio estado, LocalDate fechaAlta, LocalDate fechaBaja) {
+        // Se reutiliza el constructor anterior para evitar duplicar asignaciones.
         this(dni, nombre, apellido, fechaNac, domicilio, email, telefono, estado, fechaAlta, fechaBaja);
         this.id = id;
     }
 
-    // --- Getters y Setters ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // ====== GETTERS Y SETTERS ====== //
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDni() { return dni; }
-    public void setDni(String dni) { this.dni = dni; }
+    public String getDni() {
+        return dni;
+    }
+    public void setDni(String dni) {
+        this.dni = dni;
+    }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getNombre() {
+        return nombre;
+    }
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
 
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
+    public String getApellido() {
+        return apellido;
+    }
+    public void setApellido(String apellido) {
+        this.apellido = apellido;
+    }
 
-    public LocalDate getFechaNac() { return fechaNac; }
-    public void setFechaNac(LocalDate fechaNac) { this.fechaNac = fechaNac; }
+    public LocalDate getFechaNac() {
+        return fechaNac;
+    }
+    public void setFechaNac(LocalDate fechaNac) {
+        this.fechaNac = fechaNac;
+    }
 
-    public String getDomicilio() { return domicilio; }
-    public void setDomicilio(String domicilio) { this.domicilio = domicilio; }
+    public String getDomicilio() {
+        return domicilio;
+    }
+    public void setDomicilio(String domicilio) {
+        this.domicilio = domicilio;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getEmail() {
+        return email;
+    }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getTelefono() { return telefono; }
-    public void setTelefono(String telefono) { this.telefono = telefono; }
+    public String getTelefono() {
+        return telefono;
+    }
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
 
-    public EstadoSocio getEstado() { return estado; }
-    public void setEstado(EstadoSocio estado) { this.estado = (estado != null ? estado : EstadoSocio.ACTIVO); }
+    public EstadoSocio getEstado() {
+        return estado;
+    }
+    public void setEstado(EstadoSocio estado) {
+        this.estado = (estado != null ? estado : EstadoSocio.ACTIVO);
+    }
 
-    public LocalDate getFechaAlta() { return fechaAlta; }
-    public void setFechaAlta(LocalDate fechaAlta) { this.fechaAlta = fechaAlta; }
+    public LocalDate getFechaAlta() {
+        return fechaAlta;
+    }
+    public void setFechaAlta(LocalDate fechaAlta) {
+        this.fechaAlta = fechaAlta;
+    }
 
-    public LocalDate getFechaBaja() { return fechaBaja; }
-    public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
+    public LocalDate getFechaBaja() {
+        return fechaBaja;
+    }
+    public void setFechaBaja(LocalDate fechaBaja) {
+        this.fechaBaja = fechaBaja;
+    }
 
     public BigDecimal getSaldo() {
         return saldo;
@@ -87,11 +133,17 @@ public class Socio {
         this.saldo = saldo;
     }
 
-    // --- Helpers de compatibilidad/UX ---
-    public boolean isActivo() { return estado == EstadoSocio.ACTIVO; }
-    public void setActivo(boolean activo) { this.estado = activo ? EstadoSocio.ACTIVO : EstadoSocio.INACTIVO; }
+    // Helpers de compatibilidad para su uso en UX
+    public boolean isActivo() {
+        return estado == EstadoSocio.ACTIVO;
+    }
+    public void setActivo(boolean activo) {
+        this.estado = activo ? EstadoSocio.ACTIVO : EstadoSocio.INACTIVO;
+    }
 
 
+    // Devuelve el nombre y el apellido del socio para facilitar los listados
+    // en la aplicación.
     public String getNombreCompleto() {
         String ap = (apellido == null ? "" : apellido.trim());
         String no = (nombre == null   ? "" : nombre.trim());
