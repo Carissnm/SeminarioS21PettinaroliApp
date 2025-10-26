@@ -17,7 +17,7 @@ import java.util.Locale;
 // Controlador de la pantalla de búsqueda de socios.
 // Configura la tabla y sus columnas, permite buscar por prefijo de dni,
 // deja la tabla vacía al inicial y solo carga resultados cuando el usuario los busca.
-public class SociosBuscarController {
+public class SociosBuscarController extends BaseController {
 
     // Inyección de controles
     @FXML private TextField txtBuscarDni;
@@ -138,6 +138,4 @@ public class SociosBuscarController {
         }
     }
 
-    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private static void error(String m) { new Alert(Alert.AlertType.ERROR, m, ButtonType.OK).showAndWait(); }
 }

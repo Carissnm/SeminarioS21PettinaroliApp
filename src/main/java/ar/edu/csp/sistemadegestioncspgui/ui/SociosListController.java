@@ -18,7 +18,7 @@ import java.util.Locale;
 // Controlador de la pantalla que lista los socios del club.
 // Configura la tabla que muestra los socios.
 // Carga los datos desde el DAO al entrar y cuando se refresca.
-public class SociosListController {
+public class SociosListController extends BaseController {
 
     //Referencias inyectadas desde FXML, los id deben coincidir de manera exacta.
     @FXML private TextField txtBuscarDni;
@@ -147,7 +147,4 @@ public class SociosListController {
             return saldo.toString();
         }
     }
-
-    private static void info(String m)  { new Alert(Alert.AlertType.INFORMATION, m, ButtonType.OK).showAndWait(); }
-    private static void error(String m) { new Alert(Alert.AlertType.ERROR, m, ButtonType.OK).showAndWait(); }
 }

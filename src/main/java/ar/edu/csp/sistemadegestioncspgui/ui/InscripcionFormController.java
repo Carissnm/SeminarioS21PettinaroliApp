@@ -19,7 +19,7 @@ import java.util.Optional;
 //Permite ingresar/buscar un socio por DNI, cargar y listar las actividades activas
 //Mostrar la fecha de alta (del día de la inscripción por defecto) y el precio de alta de la actividad
 //Valida reglas básicas antes de inscribir y ejecuta la inscripción además de registar el cargo en la cuenta del socio.
-public class InscripcionFormController {
+public class InscripcionFormController extends BaseController {
 
     // Inyección desde FXML
     @FXML private TextField txtSocioDni;
@@ -309,9 +309,4 @@ public class InscripcionFormController {
     private void onCancelar() {
         Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
     }
-
-    // ====== Helpers ======
-    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private static void warn(String m){ new Alert(Alert.AlertType.WARNING, m).showAndWait(); }
-    private static void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
 }

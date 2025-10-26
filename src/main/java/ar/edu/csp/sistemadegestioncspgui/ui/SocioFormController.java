@@ -9,7 +9,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
 // Controlador del formulario del socio, tanto para Edición de un socio existente como para el Alta del socio nuevo
-public class SocioFormController {
+public class SocioFormController extends BaseController {
 
     // Inyección de controles
     @FXML private TextField txtDni, txtApellido, txtNombre, txtEmail, txtTelefono, txtDomicilio;
@@ -147,15 +147,10 @@ public class SocioFormController {
     public boolean isSaved() { return saved; }
 
     // Utilidades
-    // Devuelve "" en vez de null para no mostrarlo en campos de texto.
-    private static String nv(String s) { return s == null ? "" : s; }
-    //Para persistencia de null en la base de datos
     private static String nt(String s) { return (s == null || s.isBlank()) ? null : s.trim(); }
     //Lanza un IllegalArgumentException si viene vacío.
     private static String req(String s, String msg) {
         if (s == null || s.isBlank()) throw new IllegalArgumentException(msg);
         return s.trim();
     }
-    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private static void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
 }

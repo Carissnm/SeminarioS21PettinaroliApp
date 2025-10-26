@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 // Controlador de la pantalla de detalle del socio
-public class SocioDetalleController {
+public class SocioDetalleController extends BaseController {
 
     // Inyección de controles
     //Labels para el encabezado
@@ -150,8 +150,4 @@ public class SocioDetalleController {
 
 
     @FXML private void onVolver() { Navigation.backOr("/socios-list-view.fxml", "Socios"); }
-
-    private static String nv(String s){ return s==null ? "" : s; }
-    private static void info(String m){ new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private static void error(String m){ new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
 }
