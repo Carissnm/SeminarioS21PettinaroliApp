@@ -71,7 +71,6 @@ public class InscripcionFormController extends BaseController {
             pintarSocioSeleccionado(); //se limpia si no hay socio
         }
     }
-
     //Carga de actividades con estado Activa y configuración del render del ComboBox para mostrar solo el nombre.
     private void cargarActividades() {
         try {
@@ -240,7 +239,10 @@ public class InscripcionFormController extends BaseController {
                 return;
             }
 
-            if (socioSel == null) { warn("Seleccione o busque un socio."); return; }
+            if (socioSel == null) {
+                warn("Seleccione o busque un socio."); return;
+            }
+
             if (socioSel.getEstado() != null && "INACTIVO".equals(socioSel.getEstado().name())) {
                 warn("El socio se encuentra INACTIVO. No es posible su inscripción.");
                 return;

@@ -93,7 +93,7 @@ public class SocioDaoImpl implements SocioDao {
       FROM socio s
      WHERE s.dni LIKE CONCAT(?, '%')
      ORDER BY s.dni
-""";
+    """;
 
     // Consulta de saldo del socio
     private static final String SQL_SALDO_SOCIO = """
