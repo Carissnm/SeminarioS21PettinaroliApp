@@ -9,6 +9,7 @@ module ar.edu.csp.sistemadegestioncspgui {
 
     // BCrypt (si te da error este nombre, probá: requires org.mindrot.jbcrypt;)
     requires jbcrypt;
+    requires java.desktop;
 
     // Exportá el paquete donde está tu Application (SistemaDeGestionCSPgui)
     exports ar.edu.csp.sistemadegestioncspgui;

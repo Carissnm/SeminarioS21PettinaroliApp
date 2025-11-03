@@ -1,5 +1,6 @@
 package ar.edu.csp.sistemadegestioncspgui.dao;
 
+import ar.edu.csp.sistemadegestioncspgui.model.Actividad;
 import ar.edu.csp.sistemadegestioncspgui.model.Inscripcion;
 
 import java.math.BigDecimal;
@@ -21,4 +22,6 @@ public interface InscripcionDao {
     long inscribir(long socioId, long actividadId, BigDecimal precioUsado, String observacion) throws Exception;
 
     boolean darDeBaja(long inscripcionId, java.time.LocalDate fechaBaja) throws Exception;
+
+    List<Actividad> listarActividadesVigentesPorSocio(long socioId) throws Exception;
 }

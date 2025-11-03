@@ -38,6 +38,7 @@
             <HBox spacing="8" alignment="CENTER_RIGHT">
                 <Button text="Registrar/Actualizar apto médico" onAction="#onAptoMedico"/>
                 <Button text="Inscribir en actividad" onAction="#onInscribir"/>
+                <Button text="Registrar Pago" onAction="#onIrAPago"/>
                 <Button text="Dar de baja inscripción" onAction="#onDarBaja"/>
             </HBox>
         </VBox>

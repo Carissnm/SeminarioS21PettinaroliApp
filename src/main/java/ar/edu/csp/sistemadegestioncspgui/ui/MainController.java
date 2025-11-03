@@ -40,7 +40,7 @@ public class MainController {
     // Handlers de los botones para acceder a las distintas pantallas
     @FXML private void onSocios()      { Navigation.loadInMain("socios-menu-view.fxml", "Socios"); }
     @FXML private void onActividades() { Navigation.loadInMain("actividades-menu-view.fxml", "Actividades"); }
-    @FXML private void onPagos()       { mostrarEnDesarrollo("Pagos"); }
+    @FXML private void onPagos()       { Navigation.loadInMain("pagos-form-view.fxml", "Pagos"); }
     @FXML private void onReportes()    { mostrarEnDesarrollo("Reportes"); }
     @FXML private void onConfig()      { mostrarEnDesarrollo("Configuración"); }
     @FXML private void onSalir()       { Platform.exit(); }

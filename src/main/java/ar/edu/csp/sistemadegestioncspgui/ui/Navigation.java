@@ -7,6 +7,7 @@ import javafx.scene.layout.StackPane;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.net.URL;
 
 // Utilidad centralizada para poder manejar la navegación entre vistas embebidas en FXML
 // dentro de un contenedor principal y un título de sección.
@@ -38,26 +39,62 @@ public final class Navigation {
     //Apila la vista anterior en un "historial" para poder regresar.
     public static void loadInMain(String fxmlPath, String sectionTitle) {
         if (container == null) throw new IllegalStateException("Navigation no inicializado");
-        //Normalización de la ruta: exige que empiece con "/" para el ClassLoader.getResource.
         String normalized = fxmlPath.startsWith("/") ? fxmlPath : "/" + fxmlPath;
-        //Busca el recurso FXML en el classpath
-        var url = Navigation.class.getResource(normalized);
+        URL url = Navigation.class.getResource(normalized);
         if (url == null) {
             throw new RuntimeException("FXML no encontrado en classpath: " + normalized +
-                    "\nVerifica el nombre del archivo y que esté en src/main/resources (o su subcarpeta).");
+                    "\nVerifica el nombre del archivo y que esté en resources.");
         }
         try {
-            //Carga el árbol de nodos definido por el FXML
-            Node view = FXMLLoader.load(url);
-            // Si ya hay una vista mostrada la guarda en el historial antes de reemplazarla.
+            FXMLLoader loader = new FXMLLoader(url);
+            Node view = loader.load();
             if (!container.getChildren().isEmpty()) history.push(container.getChildren().get(0));
-            //Reemplaza la vista visible por la nueva
             container.getChildren().setAll(view);
-            //Actualiza el título de la sección
             setSectionTitle(sectionTitle);
+
+            Object controller = loader.getController();
+            if (controller instanceof ViewOnShow v) {
+                // Corre después del primer layout: no bloquea la carga visual
+                javafx.application.Platform.runLater(v::onShow);
+            }
         } catch (IOException e) {
             throw new RuntimeException("No fue posible cargar " + normalized, e);
         }
+    }
+
+    //cargar sin apilar (para "Guardar" / "Cancelar")
+    public static void loadInMainReplace(String fxmlPath, String sectionTitle) {
+        if (container == null) throw new IllegalStateException("Navigation no inicializado");
+        String normalized = fxmlPath.startsWith("/") ? fxmlPath : "/" + fxmlPath;
+        URL url = Navigation.class.getResource(normalized);
+        if (url == null) {
+            throw new RuntimeException("FXML no encontrado en classpath: " + normalized);
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(url);
+            Node view = loader.load();
+            // ojo: NO pusheamos history
+            container.getChildren().setAll(view);
+            setSectionTitle(sectionTitle);
+
+            Object controller = loader.getController();
+            if (controller instanceof ViewOnShow v) {
+                javafx.application.Platform.runLater(v::onShow);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("No fue posible cargar " + normalized, e);
+        }
+    }
+
+    // limpiar historial y cargar (para entrar al módulo)
+    public static void loadInMainReset(String fxmlPath, String sectionTitle) {
+        clearHistory();
+        loadInMainReplace(fxmlPath, sectionTitle);
+    }
+
+    // utilitario
+    public static void clearHistory() {
+        history.clear();
     }
 
     //El metodo back() permite volver a la vista anterior cuando existe el historial
@@ -71,10 +108,9 @@ public final class Navigation {
     public static void backOr(String fallbackFxml, String sectionTitle) {
         if (container != null && !history.isEmpty()) {
             container.getChildren().setAll(history.pop());
-            setSectionTitle(sectionTitle);
-        } else {
-            loadInMain(fallbackFxml, sectionTitle);
+            return; // preserva el título previo
         }
+        loadInMain(fallbackFxml, sectionTitle);
     }
 
 }

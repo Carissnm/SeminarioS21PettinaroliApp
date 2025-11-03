@@ -24,4 +24,11 @@ public class Cuenta {
     public void setSocioId(Long socioId) {
         this.socioId = socioId;
     }
+
+    @Override
+    public String toString() {
+        return "Cuenta{" +
+                "socioId=" + socioId +
+                '}';
+    }
 }

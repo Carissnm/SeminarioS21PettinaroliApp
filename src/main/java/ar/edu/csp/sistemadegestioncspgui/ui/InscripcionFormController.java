@@ -19,7 +19,7 @@ import java.util.Optional;
 //Permite ingresar/buscar un socio por DNI, cargar y listar las actividades activas
 //Mostrar la fecha de alta (del día de la inscripción por defecto) y el precio de alta de la actividad
 //Valida reglas básicas antes de inscribir y ejecuta la inscripción además de registar el cargo en la cuenta del socio.
-public class InscripcionFormController extends BaseController {
+public class InscripcionFormController extends BaseController implements ViewOnShow {
 
     // Inyección desde FXML
     @FXML private TextField txtSocioDni;
@@ -40,7 +40,7 @@ public class InscripcionFormController extends BaseController {
     // ====== Inicialización ======
     @FXML
     public void initialize() {
-        Navigation.setSectionTitle("Socios");
+        Navigation.setSectionTitle("Inscripciones");
 
         // Campo DNI listo para tipear
         if (txtSocioDni != null) {
@@ -97,6 +97,8 @@ public class InscripcionFormController extends BaseController {
             e.printStackTrace();
         }
     }
+
+
 
     // ====== Búsqueda de socio ======
 
@@ -287,9 +289,8 @@ public class InscripcionFormController extends BaseController {
 
             // Inscripción. El DAO valida el apto vigente y el estado del socio.
             inscripcionDao.inscribir(socioSel.getId(), act.getId(), precio, "Inscripción a " + act.getNombre());
-
             info("Inscripción realizada con éxito.");
-            Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
+            Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
 
         } catch (IllegalStateException ex) {
             //Frente a reglas de negocio fallidas
@@ -298,6 +299,17 @@ public class InscripcionFormController extends BaseController {
             error("No fue posible realizar la inscripción:\n" + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onShow() {
+        socioSel = null;
+        if (txtSocioDni != null) txtSocioDni.clear();
+        if (cbActividad != null) cbActividad.getSelectionModel().clearSelection();
+        if (dpFechaAlta != null) dpFechaAlta.setValue(LocalDate.now());
+        if (txtPrecioAlta != null) txtPrecioAlta.clear();
+        pintarSocioSeleccionado();
+        actualizarHabilitados();
     }
 
     //Para regresar a la pantalla anterior o a Home si no hay historial
@@ -309,6 +321,6 @@ public class InscripcionFormController extends BaseController {
     //Permite cancelar el flujo y volver al menú de inscripciones.
     @FXML
     private void onCancelar() {
-        Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
+        Navigation.backOr("/home-view.fxml", "Socios");
     }
 }

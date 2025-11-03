@@ -42,6 +42,17 @@ public class InscripcionDaoImpl implements InscripcionDao {
         VALUES (?, ?, ?, CURRENT_DATE, 'ACTIVA')
         """;
 
+    // Muestra lista de actividades vigentes de un socio
+    private static final String SQL_ACTIVIDADES_VIGENTES_POR_SOCIO = """
+    SELECT a.id, a.nombre, a.descripcion, a.estado, a.precio_default
+    FROM inscripcion i
+    JOIN actividad a ON a.id = i.actividad_id
+    WHERE i.socio_id = ?
+      AND i.estado = 'ACTIVA'
+      AND i.fecha_baja IS NULL
+    ORDER BY a.nombre
+""";
+
     // Baja lógica. Se settea la fecha de baja con la fecha del mismo día de la baja y el estado para a Baja.
     private static final String BAJA_SQL = """
         UPDATE inscripcion SET fecha_baja=?, estado='BAJA' WHERE id=?
@@ -189,6 +200,33 @@ public class InscripcionDaoImpl implements InscripcionDao {
                 return rs.next();
             }
         }
+    }
+
+    @Override
+    public java.util.List<ar.edu.csp.sistemadegestioncspgui.model.Actividad>
+    listarActividadesVigentesPorSocio(long socioId) throws Exception {
+        var out = new java.util.ArrayList<ar.edu.csp.sistemadegestioncspgui.model.Actividad>();
+        try (var cn = ds.getConnection();
+             var ps = cn.prepareStatement(SQL_ACTIVIDADES_VIGENTES_POR_SOCIO)) {
+            ps.setLong(1, socioId);
+            try (var rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    var a = new ar.edu.csp.sistemadegestioncspgui.model.Actividad();
+                    a.setId(rs.getLong("id"));
+                    a.setNombre(rs.getString("nombre"));
+                    a.setDescripcion(rs.getString("descripcion"));
+                    try {
+                        var estadoStr = rs.getString("estado");
+                        if (estadoStr != null) {
+                            a.setEstado(ar.edu.csp.sistemadegestioncspgui.model.EstadoActividad.valueOf(estadoStr.toUpperCase()));
+                        }
+                    } catch (Exception ignored) {}
+                    a.setPrecioDefault(rs.getBigDecimal("precio_default"));
+                    out.add(a);
+                }
+            }
+        }
+        return out;
     }
 
     @Override

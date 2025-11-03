@@ -42,6 +42,13 @@ public class CuentaDaoImpl implements CuentaDao {
         VALUES (?,?,?,?,?,?,?)
         """;
 
+    // Permite acceder al saldo por inscripción
+    private static final String SQL_SALDO_X_INSC = """
+    SELECT COALESCE(SUM(importe),0) AS saldo
+    FROM movimiento_cuenta
+    WHERE inscripcion_id = ?
+""";
+
     //Este metodo garantiza la existencia de la cuenta del socio y devuelve su id
     @Override public long ensureCuenta(long socioId) throws Exception {
         try (var cn = ds.getConnection()) {
@@ -199,6 +206,49 @@ public class CuentaDaoImpl implements CuentaDao {
             try (var rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getLong(1);
+            }
+        }
+    }
+
+    @Override
+    public java.math.BigDecimal saldoPorInscripcion(long inscripcionId) throws Exception {
+        try (var cn = ds.getConnection();
+             var ps = cn.prepareStatement(SQL_SALDO_X_INSC)) {
+            ps.setLong(1, inscripcionId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next()? rs.getBigDecimal(1) : java.math.BigDecimal.ZERO;
+            }
+        }
+    }
+
+    @Override
+    public void registrarPagoActividad(long socioId, long inscripcionId,
+                                       java.math.BigDecimal importe, String descripcion) throws Exception {
+        if (importe == null || importe.signum() <= 0)
+            throw new IllegalArgumentException("Importe de pago inválido");
+
+        try (var cn = ds.getConnection()) {
+            cn.setAutoCommit(false);
+            try {
+                long cuentaId = ensureCuentaTx(cn, socioId); // ya lo tenés implementado
+
+                try (var ps = cn.prepareStatement(SQL_INSERT_MOV)) { // ya lo tenés declarado arriba
+                    ps.setLong(1, cuentaId);
+                    ps.setDate(2, java.sql.Date.valueOf(java.time.LocalDate.now()));
+                    ps.setString(3, "PAGO"); // tu convención: pagos positivos
+                    ps.setString(4, (descripcion == null || descripcion.isBlank()) ? "Pago actividad" : descripcion);
+                    ps.setBigDecimal(5, importe);   // PAGO = positivo
+                    ps.setString(6, null);          // referencia_ext opcional
+                    ps.setLong(7, inscripcionId);   // <<< clave: se imputa a la actividad
+                    ps.executeUpdate();
+                }
+
+                cn.commit();
+            } catch (Exception ex) {
+                try { cn.rollback(); } catch (Exception ignore) {}
+                throw ex;
+            } finally {
+                try { cn.setAutoCommit(true); } catch (Exception ignore) {}
             }
         }
     }

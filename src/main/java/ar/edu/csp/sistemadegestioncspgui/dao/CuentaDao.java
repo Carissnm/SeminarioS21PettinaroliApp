@@ -24,4 +24,11 @@ public interface CuentaDao {
 
     // El metodo sirve para registrar un cargo devenido de la inscripción del socio en una actividad
     void registrarCargoActividad(long socioId, BigDecimal importe, Long inscripcionId, String descripcion) throws Exception;
+
+    // Deuda/saldo asociado a una inscripción (actividad)
+    java.math.BigDecimal saldoPorInscripcion(long inscripcionId) throws Exception;
+
+    // Registrar un pago imputado a una inscripción (disminuye deuda de esa actividad)
+    void registrarPagoActividad(long socioId, long inscripcionId, java.math.BigDecimal importe, String descripcion) throws Exception;
+
 }

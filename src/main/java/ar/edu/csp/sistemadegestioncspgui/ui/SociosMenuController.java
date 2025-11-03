@@ -52,12 +52,17 @@ public class SociosMenuController {
     @FXML
     private void irInscripciones() {
         //Abre un submenú relacionado a las inscripciones de socios.
-        Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
+        Navigation.loadInMainReset("/inscripcion-menu-view.fxml", "Inscripciones");
+    }
+
+    @FXML
+    private void irPagos() {
+        Navigation.loadInMainReset("/pagos-form-view.fxml", "Pagos");
     }
 
     @FXML
     private void volver() {
         //Permite volver a la vista anterior usando la pila de navegación interna.
-        Navigation.back();
+        Navigation.loadInMainReset("/home-view.fxml", "Inicio");
     }
 }

@@ -31,6 +31,8 @@ public class SocioDetalleController extends BaseController {
     @FXML private TableColumn<Inscripcion, String> colFechaAlta;
     @FXML private TableColumn<Inscripcion, String> colFechaBaja;
 
+
+
     //DAO's de soporte para la actualización/creación instancias de las distintas clases.
     private final AptoMedicoDao aptoDao = new AptoMedicoDaoImpl();
     private final InscripcionDao inscDao = new InscripcionDaoImpl();
@@ -90,9 +92,9 @@ public class SocioDetalleController extends BaseController {
     // Navegación al menú de inscripciones con el socio ya dentro del contexto
     @FXML
     private void onInscribir() {
-        // Deja el socio en el contexto y se va al form
+        if (socio == null) { warn("No hay un socio cargado en el detalle."); return; }
         SelectionContext.setSocioActual(socio);
-        Navigation.loadInMain("/inscripcion-menu-view.fxml", "Socios");
+        Navigation.loadInMain("/inscripcion-menu-view.fxml", "Inscripciones"); // <<< SIN Reset
     }
 
     @FXML
@@ -147,6 +149,14 @@ public class SocioDetalleController extends BaseController {
             }
         });
     }
+
+    @FXML
+    private void onIrAPago() {
+        if (socio == null) { warn("No hay un socio cargado en el detalle."); return; }
+        SelectionContext.setSocioActual(socio);          // pasa el socio
+        Navigation.loadInMain("/pagos-form-view.fxml", "Pagos"); // <<< SIN Reset
+    }
+
 
 
     @FXML private void onVolver() { Navigation.backOr("/socios-list-view.fxml", "Socios"); }
