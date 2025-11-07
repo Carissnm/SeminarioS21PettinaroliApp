@@ -4,6 +4,7 @@ import ar.edu.csp.sistemadegestioncspgui.model.MovimientoCuenta;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,4 +26,8 @@ public interface MovimientoCuentaDao {
 
     /** Helper: devuelve id de cuenta del socio, creándola si no existe. */
     Long ensureCuentaParaSocio(Long socioId);
+
+    boolean existeCargoMensual(Long socioId, String concepto, YearMonth periodo);
+
+    void generarCargosMensuales(Long socioId, YearMonth periodo);
 }

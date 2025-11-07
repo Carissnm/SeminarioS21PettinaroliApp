@@ -24,6 +24,14 @@ public class CuentaDaoImpl implements CuentaDao {
         FROM cuenta c LEFT JOIN movimiento_cuenta m ON m.cuenta_id=c.id
         WHERE c.socio_id=?""";
 
+    //  Para el saldo del club
+    private static final String SQL_SALDO_CLUB = """
+    SELECT COALESCE(SUM(m.importe),0) AS saldo
+      FROM movimiento_cuenta m
+      JOIN cuenta c ON c.id = m.cuenta_id
+     WHERE c.socio_id=? AND m.inscripcion_id IS NULL
+""";
+
     //Listado de los movimientos del socio, del más reciente al más antiguo
     private static final String SQL_LIST = """
         SELECT m.id, m.cuenta_id, m.fecha, m.tipo, m.descripcion, m.importe,
@@ -217,6 +225,16 @@ public class CuentaDaoImpl implements CuentaDao {
             ps.setLong(1, inscripcionId);
             try (var rs = ps.executeQuery()) {
                 return rs.next()? rs.getBigDecimal(1) : java.math.BigDecimal.ZERO;
+            }
+        }
+    }
+
+    @Override
+    public java.math.BigDecimal saldoCuotaClub(long socioId) throws Exception {
+        try (var cn = ds.getConnection(); var ps = cn.prepareStatement(SQL_SALDO_CLUB)) {
+            ps.setLong(1, socioId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? rs.getBigDecimal(1) : java.math.BigDecimal.ZERO;
             }
         }
     }

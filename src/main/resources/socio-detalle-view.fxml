@@ -6,29 +6,45 @@
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SocioDetalleController"
             prefWidth="1000" prefHeight="620">
+
     <top>
         <VBox>
+
+            <!-- Título -->
             <HBox style="-fx-padding: 14 18; -fx-background-color: #f5f5f5;">
                 <Label text="Detalle del socio" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
             </HBox>
-            <HBox spacing="16" style="-fx-padding:10 18;">
+
+            <!-- Datos del socio -->
+            <VBox spacing="4" style="-fx-padding:10 18;">
                 <Label fx:id="lblNombre" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-                <Label fx:id="lblEmailTel"/>
-                <Label fx:id="lblEstadoSaldo"/>
-                <Pane HBox.hgrow="ALWAYS"/>
-                <Button text="Volver" onAction="#onVolver"/>
-            </HBox>
+
+                <HBox spacing="12">
+                    <Label fx:id="lblEmailTel"/>
+                    <Pane HBox.hgrow="ALWAYS"/>
+                    <Button text="Volver" onAction="#onVolver"/>
+                </HBox>
+
+                <!-- estado de deuda / saldo -->
+                <Label fx:id="lblEstadoSaldo" style="-fx-font-size: 13;"/>
+
+                <!-- Apto médico -->
+                <Label fx:id="lblAptoMedico" text="Apto médico: —" style="-fx-font-size: 13;"/>
+            </VBox>
+
         </VBox>
     </top>
 
     <center>
         <VBox spacing="8" style="-fx-padding: 0 18 18 18;">
+
             <Label text="Inscripciones del socio" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+
             <TableView fx:id="tblInscripciones" VBox.vgrow="ALWAYS">
                 <columns>
                     <TableColumn fx:id="colActividad"  text="Actividad"    prefWidth="220"/>
                     <TableColumn fx:id="colEstado"     text="Estado"       prefWidth="100"/>
-                    <TableColumn fx:id="colPrecioAlta" text="Precio alta"  prefWidth="120"/>
+                    <TableColumn fx:id="colSaldo"      text="Saldo"        prefWidth="110"/>
                     <TableColumn fx:id="colFechaAlta"  text="Fecha alta"   prefWidth="120"/>
                     <TableColumn fx:id="colFechaBaja"  text="Fecha baja"   prefWidth="120"/>
                 </columns>
@@ -37,10 +53,13 @@
 
             <HBox spacing="8" alignment="CENTER_RIGHT">
                 <Button text="Registrar/Actualizar apto médico" onAction="#onAptoMedico"/>
-                <Button text="Inscribir en actividad" onAction="#onInscribir"/>
+                <Button fx:id="btnInscribir" text="Inscribir en actividad" onAction="#onInscribir"/>
                 <Button text="Registrar Pago" onAction="#onIrAPago"/>
                 <Button text="Dar de baja inscripción" onAction="#onDarBaja"/>
+                <Button fx:id="btnReactivar" text="Reactivar socio" onAction="#onReactivarSocio" visible="false" managed="false"/>
             </HBox>
+
         </VBox>
     </center>
+
 </BorderPane>

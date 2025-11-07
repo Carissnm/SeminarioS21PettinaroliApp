@@ -1,5 +1,6 @@
 package ar.edu.csp.sistemadegestioncspgui.dao;
 
+import ar.edu.csp.sistemadegestioncspgui.model.EstadoSocio;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 
 import java.util.List;
@@ -21,4 +22,7 @@ public interface SocioDao {
     boolean actualizar(Socio socio) throws Exception;
     //Permite la eliminación del socio por id, en una baja lógica (el socio queda figurando como inactivo)
     boolean eliminar(long id) throws Exception;
+
+    boolean reactivarSocio(long socioId) throws Exception;
+    boolean actualizarEstado(Long socioId, EstadoSocio nuevo) throws Exception;
 }

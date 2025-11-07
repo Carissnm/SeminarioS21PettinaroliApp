@@ -51,6 +51,9 @@ public class SociosMenuController {
 
     @FXML
     private void irInscripciones() {
+        SelectionContext.setSocioActual(null);
+        SelectionContext.setReturnToHomeAfterInscripcion(true);
+        SelectionContext.setReturnToSocioDetalle(false);
         //Abre un submenú relacionado a las inscripciones de socios.
         Navigation.loadInMainReset("/inscripcion-menu-view.fxml", "Inscripciones");
     }

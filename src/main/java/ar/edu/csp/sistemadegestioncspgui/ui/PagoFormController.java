@@ -1,6 +1,8 @@
 package ar.edu.csp.sistemadegestioncspgui.ui;
 
 import ar.edu.csp.sistemadegestioncspgui.dao.*;
+
+import ar.edu.csp.sistemadegestioncspgui.dao.*;
 import ar.edu.csp.sistemadegestioncspgui.model.Actividad;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 import javafx.fxml.FXML;
@@ -16,37 +18,55 @@ public class PagoFormController extends BaseController implements ViewOnShow {
     @FXML private Label lblSocio;
     @FXML private Label lblSaldo;
     @FXML private Label lblDeudaAct;
+    @FXML private Label lblDeudaClub;
     @FXML private RadioButton rbClub;
     @FXML private RadioButton rbActividad;
     @FXML private ComboBox<Actividad> cbActividad;
     @FXML private TextField txtImporte;
     @FXML private TextField txtDescripcion;
 
-    private final ToggleGroup tgTipo = new ToggleGroup();
+    @FXML private ToggleGroup tgTipo;
 
     private final SocioDao socioDao = new SocioDaoImpl();
     private final InscripcionDao inscDao = new InscripcionDaoImpl();
     private final CuentaDao cuentaDao = new CuentaDaoImpl();
+    private final ActividadDao actividadDao = new ActividadDaoImpl();
 
     private Socio socioSel;
-    private Long inscripcionIdSel = null;
+    private Long inscripcionIdSel;
+
+    // Guardamos el saldo de club para validaciones al guardar
+    private BigDecimal saldoClubActual = BigDecimal.ZERO;
 
     @FXML
     public void initialize() {
         Navigation.setSectionTitle("Pagos");
 
-        // ToggleGroup para tipo de pago
+        // Toggle group
         rbClub.setToggleGroup(tgTipo);
         rbActividad.setToggleGroup(tgTipo);
         rbClub.setSelected(true);
         cbActividad.setDisable(true);
 
+        // Cambiar entre club / actividad
         tgTipo.selectedToggleProperty().addListener((obs, a, b) -> {
-            boolean act = rbActividad.isSelected();
-            cbActividad.setDisable(!act);
-            if (!act) cbActividad.getSelectionModel().clearSelection();
+            boolean esActividad = rbActividad.isSelected();
+            cbActividad.setDisable(!esActividad);
+            if (!esActividad) {
+                // Modo club
+                cbActividad.getSelectionModel().clearSelection();
+                inscripcionIdSel = null;
+                if (lblDeudaAct != null) lblDeudaAct.setText("");
+                // limpiar importe ANTES de sugerir (evita arrastrar valores anteriores)
+                if (txtImporte != null && txtImporte.getText() != null && !txtImporte.getText().isBlank()) {
+                    txtImporte.clear();
+                }
+                sugerirDeudaClub();       // calcula y sugiere importe de club sólo si hay deuda
+            }
             autocompletarDescripcion();
         });
+
+        // Al elegir actividad → cargar deuda de esa actividad y sugerir importe/descripción
         cbActividad.getSelectionModel().selectedItemProperty().addListener((obs, oldA, newA) -> {
             inscripcionIdSel = null;
             if (rbActividad.isSelected() && socioSel != null && newA != null) {
@@ -55,31 +75,22 @@ public class PagoFormController extends BaseController implements ViewOnShow {
                     if (inscOpt.isPresent()) {
                         inscripcionIdSel = inscOpt.get().getId();
 
-                        var saldo = cuentaDao.saldoPorInscripcion(inscripcionIdSel); // cargos(-) + pagos(+)
-                        var deuda = saldo.signum() < 0 ? saldo.negate() : java.math.BigDecimal.ZERO;
-
-                        // sugerir importe si el campo está vacío
-                        if (txtImporte.getText() == null || txtImporte.getText().isBlank()) {
-                            txtImporte.setText(deuda.compareTo(java.math.BigDecimal.ZERO) > 0 ? deuda.toPlainString() : "");
-                        }
+                        var saldo = cuentaDao.saldoPorInscripcion(inscripcionIdSel); // cargos(-)+pagos(+)
+                        var deuda = saldo.signum() < 0 ? saldo.negate() : BigDecimal.ZERO;
 
                         if (lblDeudaAct != null) lblDeudaAct.setText("$" + deuda.toPlainString());
-
-                        // autodescripción
+                        if ((txtImporte.getText() == null || txtImporte.getText().isBlank()) && deuda.signum() > 0) {
+                            txtImporte.setText(deuda.toPlainString());
+                        }
                         if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()
                                 || txtDescripcion.getText().startsWith("Pago actividad:")) {
                             txtDescripcion.setText("Pago actividad: " + newA.getNombre());
                         }
                     } else {
-                        // no hay inscripción activa → limpiar sugerencias
-                        if (txtImporte.getText() == null || txtImporte.getText().isBlank()) {
-                            txtImporte.clear();
-                        }
                         if (lblDeudaAct != null) lblDeudaAct.setText("");
+                        if (txtImporte.getText() == null || txtImporte.getText().isBlank()) txtImporte.clear();
                     }
-                } catch (Exception e) {
-                    // opcional: log / warn suave
-                }
+                } catch (Exception ignore) {}
             } else {
                 if (lblDeudaAct != null) lblDeudaAct.setText("");
             }
@@ -88,22 +99,122 @@ public class PagoFormController extends BaseController implements ViewOnShow {
 
     @Override
     public void onShow() {
+        // 1) tomar socio del contexto (desde Detalle → SelectionContext.setSocioActual(socio))
         var s = SelectionContext.getSocioActual();
         if (s != null) {
-            this.socioSel = s;
-            if (txtDni != null) txtDni.setText(s.getDni());
+            socioSel = s;
             if (lblSocio != null) lblSocio.setText(s.getNombreCompleto() + " (" + s.getDni() + ")");
+            // saldo total como referencia
+            try {
+                var saldoTotal = cuentaDao.saldo(s.getId());
+                if (lblSaldo != null) lblSaldo.setText("Saldo total: $" + saldoTotal.toPlainString());
+            } catch (Exception ignore) {}
         }
+
+        // 2) limpiar campos y set por defecto (ANTES de sugerir)
         if (txtDni != null) txtDni.clear();
-        if (lblSocio != null) lblSocio.setText("");
-        if (lblSaldo != null) lblSaldo.setText("");
+        if (txtImporte != null) txtImporte.clear();
+        if (txtDescripcion != null) txtDescripcion.clear();
+        if (lblDeudaClub != null) lblDeudaClub.setText("");
+        if (lblDeudaAct != null) lblDeudaAct.setText("");
         if (rbClub != null) rbClub.setSelected(true);
         if (cbActividad != null) {
             cbActividad.getItems().clear();
             cbActividad.setDisable(true);
         }
-        if (txtImporte != null) txtImporte.clear();
-        if (txtDescripcion != null) txtDescripcion.clear();
+
+        // 3) cargar actividades activas del socio (combo)
+        cargarActividadesDeSocio();
+
+        // 4) sugerir deuda de club (después de limpiar)
+        sugerirDeudaClub();
+
+        // 5) autodescripción base
+        autocompletarDescripcion();
+    }
+
+    private void cargarActividadesDeSocio() {
+        if (socioSel == null || cbActividad == null) return;
+        try {
+            var inscs = inscDao.listarPorSocio(socioSel.getId());
+            var activas = inscs.stream()
+                    .filter(i -> i.getFechaBaja() == null && (i.getEstado()==null || "ACTIVA".equals(i.getEstado().name())))
+                    .toList();
+
+            // armamos objetos Actividad mínimos con (id, nombre, precioDefault) para el combo
+            var acts = new java.util.ArrayList<Actividad>();
+            for (var i : activas) {
+                var a = new Actividad();
+                a.setId(i.getActividadId());
+                a.setNombre(i.getActividadNombre());
+                a.setPrecioDefault(i.getCuotaMensual()); // opcional para mostrar
+                acts.add(a);
+            }
+            cbActividad.getItems().setAll(acts);
+
+            // renderiza por nombre
+            cbActividad.setCellFactory(lv -> new ListCell<>() {
+                @Override protected void updateItem(Actividad a, boolean empty) {
+                    super.updateItem(a, empty);
+                    setText(empty || a==null ? "" : a.getNombre());
+                }
+            });
+            cbActividad.setButtonCell(new ListCell<>() {
+                @Override protected void updateItem(Actividad a, boolean empty) {
+                    super.updateItem(a, empty);
+                    setText(empty || a==null ? "" : a.getNombre());
+                }
+            });
+        } catch (Exception e) {
+            cbActividad.getItems().clear();
+        }
+    }
+
+    private void sugerirDeudaClub() {
+        if (socioSel == null) return;
+        try {
+            saldoClubActual = cuentaDao.saldoCuotaClub(socioSel.getId()); // sólo club (inscripcion_id IS NULL)
+            var deuda = saldoClubActual.signum() < 0 ? saldoClubActual.negate() : BigDecimal.ZERO;
+
+            if (lblDeudaClub != null) {
+                if (deuda.signum() > 0) {
+                    lblDeudaClub.setText("Deuda: $" + deuda.toPlainString());
+                    lblDeudaClub.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                } else {
+                    String msg = saldoClubActual.signum() > 0
+                            ? "Sin deuda (saldo a favor: $" + saldoClubActual.toPlainString() + ")"
+                            : "Sin deuda";
+                    lblDeudaClub.setText(msg);
+                    lblDeudaClub.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                }
+            }
+
+            // Sólo autocompletar importe si hay deuda y el campo está vacío
+            if ((txtImporte.getText() == null || txtImporte.getText().isBlank())) {
+                if (deuda.signum() > 0) {
+                    txtImporte.setText(deuda.toPlainString());
+                } else {
+                    txtImporte.clear();
+                }
+            }
+        } catch (Exception ignore) {}
+    }
+
+    private void autocompletarDescripcion() {
+        if (txtDescripcion == null) return;
+        if (rbClub.isSelected()) {
+            if (txtDescripcion.getText()==null || txtDescripcion.getText().isBlank()
+                    || txtDescripcion.getText().startsWith("Pago actividad:")) {
+                txtDescripcion.setText("Pago cuota de club");
+            }
+        } else {
+            var a = cbActividad.getValue();
+            if (a != null) {
+                txtDescripcion.setText("Pago actividad: " + a.getNombre());
+            } else if (txtDescripcion.getText()==null || txtDescripcion.getText().isBlank()) {
+                txtDescripcion.setText("Pago actividad");
+            }
+        }
     }
 
     // Buscar socio por DNI/prefijo con elección cuando hay varios
@@ -132,15 +243,18 @@ public class PagoFormController extends BaseController implements ViewOnShow {
             lblSocio.setText(socioSel.getNombreCompleto() + " (" + socioSel.getDni() + ")");
             txtDni.setText(socioSel.getDni());
 
-            // saldo y actividades vigentes
             var saldo = cuentaDao.saldo(socioSel.getId());
             lblSaldo.setText("$" + saldo.toPlainString());
-            cbActividad.getItems().setAll(inscDao.listarActividadesVigentesPorSocio(socioSel.getId()));
 
+            cargarActividadesDeSocio();   // repuebla combo
             if (rbActividad.isSelected() && cbActividad.getValue() != null) {
-                // fuerza a que el listener corra para la actividad actual
                 cbActividad.getSelectionModel().select(cbActividad.getValue());
             }
+
+            // al cambiar de socio, recalculá deuda club
+            if (txtImporte != null) txtImporte.clear();
+            sugerirDeudaClub();
+
             autocompletarDescripcion();
 
         } catch (Exception e) {
@@ -161,25 +275,14 @@ public class PagoFormController extends BaseController implements ViewOnShow {
         return lista.stream().filter(s -> s.getDni().equals(dniElegido)).findFirst().orElse(null);
     }
 
-    private void autocompletarDescripcion() {
-        if (txtDescripcion == null) return;
-        if (rbActividad.isSelected()) {
-            var a = cbActividad.getValue();
-            if (a != null && (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank())) {
-                txtDescripcion.setText("Pago actividad: " + a.getNombre());
-            }
-        } else {
-            if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()) {
-                txtDescripcion.setText("Pago cuota del club");
-            }
-        }
-    }
-
     @FXML
     private void onGuardar() {
-        if (socioSel == null) { warn("Busque y seleccione un socio."); return; }
+        if (socioSel == null) {
+            warn("Busque y seleccione un socio.");
+            return;
+        }
 
-        // Parseo robusto de importe (admite coma o punto)
+        // 1) Parseo del importe
         BigDecimal importe;
         try {
             String raw = (txtImporte.getText() == null ? "" : txtImporte.getText().trim()).replace(",", ".");
@@ -188,51 +291,86 @@ public class PagoFormController extends BaseController implements ViewOnShow {
             warn("Importe inválido.");
             return;
         }
-        if (importe.signum() <= 0) { warn("El importe debe ser positivo."); return; }
+        if (importe.signum() <= 0) {
+            warn("El importe debe ser positivo.");
+            return;
+        }
 
-        // Descripción por defecto según tipo
-        String desc = txtDescripcion.getText();
+        // 2) Descripción (por defecto según tipo)
+        String desc = (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank())
+                ? (rbActividad.isSelected() ? "Pago actividad" : "Pago cuota de club")
+                : txtDescripcion.getText().trim();
+
         try {
+            // 3) Registrar pago (club vs actividad)
             if (rbActividad.isSelected()) {
                 var a = cbActividad.getValue();
                 if (a == null) { warn("Seleccione una actividad para pagar."); return; }
-                if (inscripcionIdSel == null) {
+
+                Long inscId = inscripcionIdSel;
+                if (inscId == null) {
                     var inscOpt = inscDao.buscarActiva(socioSel.getId(), a.getId());
                     if (inscOpt.isEmpty()) {
                         warn("El socio no tiene inscripción activa en esa actividad.");
                         return;
                     }
-                    inscripcionIdSel = inscOpt.get().getId();
+                    inscId = inscOpt.get().getId();
                 }
-                cuentaDao.registrarPagoActividad(socioSel.getId(), inscripcionIdSel, importe, desc);
+                cuentaDao.registrarPagoActividad(socioSel.getId(), inscId, importe, desc);
+
             } else {
-                // pago general: cuota del club
+                // ---- Cuota del club ----
+                // Si no hay deuda (saldoClubActual >= 0), pedir confirmación:
+                if (saldoClubActual != null && saldoClubActual.signum() >= 0) {
+                    var conf = new Alert(
+                            Alert.AlertType.CONFIRMATION,
+                            "El socio no tiene deuda de club " +
+                                    (saldoClubActual.signum() > 0 ? "(saldo a favor: $" + saldoClubActual.toPlainString() + ")" : "") +
+                                    ".\n¿Registrar de todos modos este pago (sumará crédito)?",
+                            ButtonType.YES, ButtonType.NO
+                    );
+                    var r = conf.showAndWait();
+                    if (r.isEmpty() || r.get() == ButtonType.NO) return;
+                }
                 cuentaDao.registrarPago(socioSel.getId(), importe, desc);
             }
 
+            // 4) Actualizo saldo en memoria y dejo el socio en contexto
+            try {
+                var nuevoSaldo = cuentaDao.saldo(socioSel.getId());
+                socioSel.setSaldo(nuevoSaldo);
+                SelectionContext.setSocioActual(socioSel);
+            } catch (Exception ignore) {}
+
             info("Pago registrado correctamente.");
-            Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
+
+            // 5) Navegar según origen
+            boolean volverADetalle = SelectionContext.getReturnToSocioDetalle();
+            SelectionContext.setReturnToSocioDetalle(false); // limpiar flag
+
+            if (volverADetalle) {
+                SelectionContext.setSkipOldDetalleOnce(true);
+                Navigation.loadInMainReplace("/socio-detalle-view.fxml", "Socios");
+            } else {
+                Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
+            }
 
         } catch (Exception e) {
             error("No fue posible registrar el pago:\n" + e.getMessage());
         }
+    }
 
-        try {
-            cuentaDao.registrarPago(socioSel.getId(), importe, desc);
-            info("Pago registrado correctamente.");
-            Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
-        } catch (Exception e) {
-            error("No fue posible registrar el pago:\n" + e.getMessage());
+    // --- Volver / Cancelar respetando el origen ---
+    private void volverSegunOrigen() {
+        boolean volverADetalle = SelectionContext.getReturnToSocioDetalle();
+        SelectionContext.setReturnToSocioDetalle(false); // limpiar flag
+        if (volverADetalle) {
+            Navigation.backOr("/socio-detalle-view.fxml", "Socios");
+        } else {
+            Navigation.backOr("/home-view.fxml", "Inicio");
         }
     }
 
-    @FXML
-    private void onCancelar() {
-        Navigation.backOr("/home-view.fxml", "Inicio");
-    }
-
-    @FXML
-    private void onVolver() {
-        Navigation.backOr("/home-view.fxml", "Inicio");
-    }
+    @FXML private void onCancelar() { volverSegunOrigen(); }
+    @FXML private void onVolver()   { volverSegunOrigen(); }
 }

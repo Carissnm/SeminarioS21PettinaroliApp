@@ -93,4 +93,13 @@ public class MovimientoCuenta {
     public void setInscripcionId(Long inscripcionId) {
         this.inscripcionId = inscripcionId;
     }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] %s: %s %s",
+                fecha != null ? fecha.toString() : "-",
+                tipo != null ? tipo : "",
+                descripcion != null ? descripcion : "",
+                importe != null ? importe : "");
+    }
 }

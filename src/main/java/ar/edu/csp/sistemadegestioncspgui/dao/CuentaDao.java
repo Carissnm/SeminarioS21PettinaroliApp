@@ -28,6 +28,9 @@ public interface CuentaDao {
     // Deuda/saldo asociado a una inscripción (actividad)
     java.math.BigDecimal saldoPorInscripcion(long inscripcionId) throws Exception;
 
+    // Deuda/saldo
+    java.math.BigDecimal saldoCuotaClub(long socioId) throws Exception;
+
     // Registrar un pago imputado a una inscripción (disminuye deuda de esa actividad)
     void registrarPagoActividad(long socioId, long inscripcionId, java.math.BigDecimal importe, String descripcion) throws Exception;
 

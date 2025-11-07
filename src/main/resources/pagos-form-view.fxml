@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
@@ -33,28 +32,36 @@
             <Label text="Saldo actual:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
             <Label fx:id="lblSaldo" GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
 
-            <!-- Tipo de pago -->
-            <Label text="Tipo de pago:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-            <HBox spacing="12" GridPane.rowIndex="2" GridPane.columnIndex="1">
-                <RadioButton text="Cuota del club" fx:id="rbClub"/>
-                <RadioButton text="Actividad" fx:id="rbActividad"/>
-            </HBox>
+
+            <fx:define>
+                <ToggleGroup fx:id="tgTipo"/>
+            </fx:define>
 
             <!-- Actividad -->
             <Label text="Actividad:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
             <ComboBox fx:id="cbActividad" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="320"/>
 
-            <!-- NUEVO: Deuda de la actividad -->
+            <!-- Deuda de la actividad -->
             <Label text="Deuda de la actividad:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
             <Label fx:id="lblDeudaAct" GridPane.rowIndex="4" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
 
-            <!-- Importe (mover a fila 5) -->
-            <Label text="Importe:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtImporte" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+            <!--  Deuda de cuota del club -->
+            <Label text="Deuda cuota del club:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+            <Label fx:id="lblDeudaClub" GridPane.rowIndex="5" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
 
-            <!-- Descripción (mover a fila 6) -->
-            <Label text="Descripción:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-            <TextField fx:id="txtDescripcion" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+            <!-- Tipo de pago -->
+            <Label text="Tipo de pago:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+            <HBox spacing="12" GridPane.rowIndex="6" GridPane.columnIndex="1">
+                <RadioButton text="Cuota del club" fx:id="rbClub" toggleGroup="$tgTipo"/>
+                <RadioButton text="Actividad" fx:id="rbActividad" toggleGroup="$tgTipo"/>
+            </HBox>
+            <!-- Importe -->
+            <Label text="Importe:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtImporte" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+            <!-- Descripción -->
+            <Label text="Descripción:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtDescripcion" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
 
         </GridPane>
     </center>

@@ -10,6 +10,7 @@ import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 public final class SelectionContext {
     //Estado global: último socio seleccionado en la Interfaz de Usuario
     private static Socio socioActual;
+
     //Utilidad, no instanciable.
     private SelectionContext() {}
     //Guarda el socio para que pueda ser recuperado en la siguiente vista
@@ -24,5 +25,27 @@ public final class SelectionContext {
     //Limpia el contexto y deja de haber un socio seleccionado.
     public static void clear() {
         socioActual = null;
+    }
+
+    private static boolean returnToSocioDetalle = false;
+    public static boolean getReturnToSocioDetalle() { return returnToSocioDetalle; }
+    public static void setReturnToSocioDetalle(boolean v) { returnToSocioDetalle = v; }
+
+    private static boolean skipOldDetalleOnce;
+
+    public static boolean isSkipOldDetalleOnce() {
+        return skipOldDetalleOnce;
+    }
+    public static void setSkipOldDetalleOnce(boolean v) {
+        skipOldDetalleOnce = v;
+    }
+
+    private static boolean returnToHomeAfterInscripcion = false;
+
+    public static boolean isReturnToHomeAfterInscripcion() {
+        return returnToHomeAfterInscripcion;
+    }
+    public static void setReturnToHomeAfterInscripcion(boolean v) {
+        returnToHomeAfterInscripcion = v;
     }
 }

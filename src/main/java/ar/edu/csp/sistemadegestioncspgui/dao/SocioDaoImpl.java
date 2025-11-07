@@ -324,4 +324,36 @@ public class SocioDaoImpl implements SocioDao {
             }
         }
     }
+
+    @Override
+    public boolean reactivarSocio(long socioId) throws Exception {
+        final String sql = """
+        UPDATE socio
+           SET estado = 'ACTIVO',
+               fecha_baja = NULL
+         WHERE id = ?
+    """;
+        try (var con = ds.getConnection();
+             var ps  = con.prepareStatement(sql)) {
+            ps.setLong(1, socioId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean actualizarEstado(Long socioId, EstadoSocio nuevo) throws Exception {
+        if (nuevo == EstadoSocio.ACTIVO) {
+            return reactivarSocio(socioId); // delega y limpia fecha_baja
+        }
+        final String sql = "UPDATE socio SET estado = ? WHERE id = ?";
+        try (var con = ds.getConnection();
+             var ps  = con.prepareStatement(sql)) {
+            ps.setString(1, nuevo.name());
+            ps.setLong(2, socioId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+
+
 }

@@ -1,17 +1,14 @@
 package ar.edu.csp.sistemadegestioncspgui.ui;
 
-import ar.edu.csp.sistemadegestioncspgui.dao.ActividadDao;
-import ar.edu.csp.sistemadegestioncspgui.dao.ActividadDaoImpl;
-import ar.edu.csp.sistemadegestioncspgui.dao.InscripcionDao;
-import ar.edu.csp.sistemadegestioncspgui.dao.InscripcionDaoImpl;
-import ar.edu.csp.sistemadegestioncspgui.dao.SocioDao;
-import ar.edu.csp.sistemadegestioncspgui.dao.SocioDaoImpl;
+import ar.edu.csp.sistemadegestioncspgui.dao.*;
+import ar.edu.csp.sistemadegestioncspgui.model.EstadoSocio;
 import ar.edu.csp.sistemadegestioncspgui.model.Actividad;
 import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +30,8 @@ public class InscripcionFormController extends BaseController implements ViewOnS
     private final SocioDao socioDao = new SocioDaoImpl();
     private final ActividadDao actividadDao = new ActividadDaoImpl();
     private final InscripcionDao inscripcionDao = new InscripcionDaoImpl();
-
+    private final MovimientoCuentaDao mcDao = new MovimientoCuentaDaoImpl();
+    private final CuentaDao cuentaDao = new CuentaDaoImpl();
     // ====== Estado ======
     private Socio socioSel;  // socio seleccionado/encontrado
 
@@ -42,35 +40,44 @@ public class InscripcionFormController extends BaseController implements ViewOnS
     public void initialize() {
         Navigation.setSectionTitle("Inscripciones");
 
-        // Campo DNI listo para tipear
+        // Habilitar edición de DNI
         if (txtSocioDni != null) {
             txtSocioDni.setEditable(true);
             txtSocioDni.setDisable(false);
         }
 
-        // Fecha por defecto = fecha en la que se está realizando la inscripción
+        // Fecha por defecto
         if (dpFechaAlta != null && dpFechaAlta.getValue() == null) {
             dpFechaAlta.setValue(LocalDate.now());
         }
 
-        // El precio de alta de la actividad es informativo y no se puede editar desde este campo.
+        // Precio
         if (txtPrecioAlta != null) {
             txtPrecioAlta.setEditable(false);
         }
 
-        // Carga de actividades ACTIVAS
+
         cargarActividades();
 
-        // Si se viene desde el detalle del socio se toma el socio del contexto
         var socioCtx = SelectionContext.getSocioActual();
-        if (socioCtx != null) {
+        if (socioCtx == null) {
+            SelectionContext.setReturnToHomeAfterInscripcion(true);
+            socioSel = null;
+            if (txtSocioDni != null) txtSocioDni.clear();
+            if (lblSocioSel != null) { lblSocioSel.setText(""); lblSocioSel.setStyle(null); lblSocioSel.setTooltip(null); }
+            if (cbActividad != null) cbActividad.getSelectionModel().clearSelection();
+            if (dpFechaAlta != null) dpFechaAlta.setValue(LocalDate.now());
+            if (txtPrecioAlta != null) txtPrecioAlta.clear();
+
+        } else {
             this.socioSel = socioCtx;
             if (txtSocioDni != null) txtSocioDni.setText(socioSel.getDni());
             pintarSocioSeleccionado();
-        } else {
-            pintarSocioSeleccionado(); //se limpia si no hay socio
         }
+
+        actualizarHabilitados();
     }
+
     //Carga de actividades con estado Activa y configuración del render del ComboBox para mostrar solo el nombre.
     private void cargarActividades() {
         try {
@@ -161,62 +168,66 @@ public class InscripcionFormController extends BaseController implements ViewOnS
 
     // Habilita/Deshabilita el botón Guardar en función de que haya socio y actividad seleccionados
     private void actualizarHabilitados() {
-        boolean ok = (socioSel != null && cbActividad != null && cbActividad.getValue() != null);
-        if (btnGuardar != null) btnGuardar.setDisable(!ok);
-    }
+        boolean socioOk = (socioSel != null);
+        boolean actOk   = (cbActividad != null && cbActividad.getValue() != null);
+        boolean activo  = !(socioOk && socioSel.getEstado() == EstadoSocio.INACTIVO);
 
-
-    //Búsqueda de socio por dni
-    private void buscarSocioPorDni() {
-        String dni = txtSocioDni.getText() == null ? "" : txtSocioDni.getText().trim();
-        if (dni.isEmpty()) { warn("Ingrese un DNI para buscar."); return; }
-
-        try {
-            List<Socio> hallados = socioDao.buscarPorDni(dni);
-            if (hallados.isEmpty()) {
-                warn("No se encontró ningún socio con ese DNI/prefijo.");
-                return;
-            }
-            Optional<Socio> exacto = hallados.stream()
-                    .filter(s -> dni.equalsIgnoreCase(s.getDni()))
-                    .findFirst();
-
-            if (exacto.isPresent()) {
-                socioSel = exacto.get();
-            } else if (hallados.size() == 1) {
-                socioSel = hallados.get(0);
-            } else {
-                warn("Se encontraron varios socios para ese prefijo. Utilice el botón Buscar…");
-                return;
-            }
-
-            // Se muestra el DNI confirmado
-            txtSocioDni.setText(socioSel.getDni());
-
-        } catch (Exception e) {
-            error("Error en la búsqueda del socio:\n" + e.getMessage());
-            e.printStackTrace();
-        }
+        boolean habilitado = socioOk && actOk && activo;
+        if (btnGuardar != null) btnGuardar.setDisable(!habilitado);
     }
 
     // Este metodo muestra un resumen del socio seleccionado
     private void pintarSocioSeleccionado() {
         if (lblSocioSel == null) return;
+
         if (socioSel == null) {
             lblSocioSel.setText("");
+            lblSocioSel.setStyle(null);
             lblSocioSel.setTooltip(null);
+            actualizarHabilitados();
             return;
         }
-        String texto = String.format("%s (%s) – %s  |  Saldo: %s",
-                socioSel.getNombreCompleto(),
-                socioSel.getDni(),
-                socioSel.getEstado() == null ? "" : socioSel.getEstado().name(),
-                socioSel.getSaldo() == null ? "$0" : socioSel.getSaldo().toPlainString());
-        lblSocioSel.setText(texto);
 
-        var tip = new Tooltip(texto);
-        lblSocioSel.setTooltip(tip);
+        try {
+            // Aseguramos cargos mensuales (idempotente)
+            mcDao.generarCargosMensuales(socioSel.getId(), YearMonth.now());
+
+            // Saldos
+            BigDecimal saldoClub  = cuentaDao.saldoCuotaClub(socioSel.getId()); // +crédito / -deuda
+            BigDecimal saldoTotal = cuentaDao.saldo(socioSel.getId());          // club + actividades
+
+            BigDecimal deudaClub  = saldoClub.signum() < 0 ? saldoClub.negate() : BigDecimal.ZERO;
+            BigDecimal deudaTotal = saldoTotal.signum() < 0 ? saldoTotal.negate() : BigDecimal.ZERO;
+
+            // Texto unificado: Estado | Deuda club | Deuda/Saldo total
+            String estado = (socioSel.getEstado() == null ? "" : socioSel.getEstado().name());
+            String texto;
+            if (deudaTotal.signum() > 0) {
+                texto = String.format("%s  |  Deuda club: %s  |  Deuda total: %s",
+                        estado,
+                        deudaClub.signum() > 0 ? deudaClub.toPlainString() : "0",
+                        deudaTotal.toPlainString());
+                lblSocioSel.setStyle("-fx-text-fill: #B00020; -fx-font-weight: bold;"); // rojo
+            } else {
+                // No hay deuda → mostrar saldo/0
+                texto = String.format("%s  |  Saldo: %s",
+                        estado,
+                        saldoTotal.toPlainString());
+                lblSocioSel.setStyle("-fx-text-fill: #14854F; -fx-font-weight: bold;"); // verde
+            }
+
+            lblSocioSel.setText(socioSel.getNombreCompleto() + " (" + socioSel.getDni() + ") – " + texto);
+            lblSocioSel.setTooltip(new Tooltip(lblSocioSel.getText()));
+
+        } catch (Exception e) {
+            // Fallback seguro
+            lblSocioSel.setText(socioSel.getNombreCompleto() + " (" + socioSel.getDni() + ") – [Error leyendo saldo]");
+            lblSocioSel.setStyle("-fx-text-fill: #B00020; -fx-font-weight: bold;");
+        }
+
+        actualizarHabilitados();
     }
+
 
 
     @FXML
@@ -225,9 +236,9 @@ public class InscripcionFormController extends BaseController implements ViewOnS
         if (a == null || a.getPrecioDefault() == null) {
             txtPrecioAlta.setText("");
         } else {
-            // Se muestra el precio como figura en la base de datos
             txtPrecioAlta.setText(a.getPrecioDefault().toPlainString());
         }
+        actualizarHabilitados(); // <-- nuevo
     }
 
     // Metodo para registrar la inscripción de un socio a una determinada actividad.
@@ -290,8 +301,15 @@ public class InscripcionFormController extends BaseController implements ViewOnS
             // Inscripción. El DAO valida el apto vigente y el estado del socio.
             inscripcionDao.inscribir(socioSel.getId(), act.getId(), precio, "Inscripción a " + act.getNombre());
             info("Inscripción realizada con éxito.");
-            Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
-
+            if (SelectionContext.getReturnToSocioDetalle()) {
+                SelectionContext.setReturnToSocioDetalle(false);
+                Navigation.loadInMainReplace("/socio-detalle-view.fxml", "Socios");
+            } else if (SelectionContext.isReturnToHomeAfterInscripcion()) {
+                SelectionContext.setReturnToHomeAfterInscripcion(false);
+                Navigation.loadInMainReset("/home-view.fxml", "Inicio");
+            } else {
+                Navigation.backOr("/socios-list-view.fxml", "Socios");
+            }
         } catch (IllegalStateException ex) {
             //Frente a reglas de negocio fallidas
             error(ex.getMessage());
@@ -300,22 +318,49 @@ public class InscripcionFormController extends BaseController implements ViewOnS
             e.printStackTrace();
         }
     }
-
     @Override
     public void onShow() {
-        socioSel = null;
-        if (txtSocioDni != null) txtSocioDni.clear();
-        if (cbActividad != null) cbActividad.getSelectionModel().clearSelection();
-        if (dpFechaAlta != null) dpFechaAlta.setValue(LocalDate.now());
-        if (txtPrecioAlta != null) txtPrecioAlta.clear();
-        pintarSocioSeleccionado();
+        // Si vengo desde Detalle de Socio, habrá un socio en el contexto
+        var ctx = SelectionContext.getSocioActual();
+
+        if (ctx != null) {
+            this.socioSel = ctx;
+            if (txtSocioDni != null) txtSocioDni.setText(ctx.getDni());
+            pintarSocioSeleccionado();
+
+            if (dpFechaAlta != null && dpFechaAlta.getValue() == null) {
+                dpFechaAlta.setValue(LocalDate.now());
+            }
+            if (cbActividad != null && cbActividad.getItems().isEmpty()) {
+                cargarActividades();
+            }
+        } else {
+            this.socioSel = null;
+            if (txtSocioDni != null) txtSocioDni.clear();
+            if (cbActividad != null) cbActividad.getSelectionModel().clearSelection();
+            if (dpFechaAlta != null) dpFechaAlta.setValue(LocalDate.now());
+            if (txtPrecioAlta != null) txtPrecioAlta.clear();
+            pintarSocioSeleccionado();
+        }
+
         actualizarHabilitados();
     }
+
 
     //Para regresar a la pantalla anterior o a Home si no hay historial
     @FXML
     private void onVolver() {
-        Navigation.backOr("/home-view.fxml", "Socios");
+        if (SelectionContext.getReturnToSocioDetalle()) {
+            SelectionContext.setReturnToSocioDetalle(false);
+            Navigation.backOr("/socios-list-view.fxml", "Socios");
+            return;
+        }
+        if (SelectionContext.isReturnToHomeAfterInscripcion()) {
+            SelectionContext.setReturnToHomeAfterInscripcion(false);
+            Navigation.loadInMain("/home-view.fxml", "Inicio");
+            return;
+        }
+        Navigation.backOr("/home-view.fxml", "Inicio");
     }
 
     //Permite cancelar el flujo y volver al menú de inscripciones.
