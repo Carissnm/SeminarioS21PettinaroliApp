@@ -327,66 +327,54 @@ public class SocioDaoImpl implements SocioDao {
 
     @Override
     public boolean reactivarSocio(long socioId) throws Exception {
+        final String SQL_UPD = """
+        UPDATE socio
+           SET estado = 'ACTIVO',
+               fecha_baja = NULL
+         WHERE id = ?
+    """;
+
+        var ds = ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory.get();
         try (var cn = ds.getConnection()) {
             cn.setAutoCommit(false);
-
-            // 1) Reactivar: si no tiene fecha_alta, la seteamos hoy
-            try (var ps = cn.prepareStatement("""
-            UPDATE socio
-               SET estado = 'ACTIVO',
-                   fecha_baja = NULL,
-                   fecha_alta = COALESCE(fecha_alta, CURRENT_DATE)
-             WHERE id = ?
-        """)) {
+            try (var ps = cn.prepareStatement(SQL_UPD)) {
                 ps.setLong(1, socioId);
-                if (ps.executeUpdate() == 0) { cn.rollback(); return false; }
-            }
-
-            // 2) Leer la cuota social
-            BigDecimal cuota = BigDecimal.ZERO;
-            try (var ps = cn.prepareStatement("""
-            SELECT valor_num FROM parametros_globales WHERE clave = 'CUOTA_SOCIAL'
-        """);
-                 var rs = ps.executeQuery()) {
-                if (rs.next() && rs.getBigDecimal(1) != null) {
-                    cuota = rs.getBigDecimal(1);
-                }
-            }
-            // Si no hay parámetro o es 0, no metemos cargo (pero seguimos con la reactivación)
-            if (cuota != null && cuota.signum() > 0) {
-                // 3) Asegurar cuenta y obtener id
-                long cuentaId;
-                try (var ins = cn.prepareStatement(
-                        "INSERT INTO cuenta (socio_id) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM cuenta WHERE socio_id=?)")) {
-                    ins.setLong(1, socioId);
-                    ins.setLong(2, socioId);
-                    ins.executeUpdate();
-                }
-                try (var sel = cn.prepareStatement("SELECT id FROM cuenta WHERE socio_id=?")) {
-                    sel.setLong(1, socioId);
-                    try (var rs = sel.executeQuery()) {
-                        rs.next(); cuentaId = rs.getLong(1);
+                int n = ps.executeUpdate();
+                if (n == 0) { cn.rollback(); return false; }
+                var parametros = new ParametrosDaoImpl();
+                var importeOpt = parametros.getDecimal("CUOTA_MENSUAL_CLUB");
+                var importe = importeOpt.orElse(BigDecimal.ZERO);
+                if (importe.signum() > 0) {
+                    final String SQL_MOV = """
+                    INSERT INTO movimiento_cuenta
+                           (cuenta_id, fecha, tipo, descripcion, importe, referencia_ext, inscripcion_id)
+                    VALUES ( ?, CURRENT_DATE, 'ALTA_SOCIO_CUOTA_CLUB',
+                            'Reactivación - Cuota del club', ?, NULL, NULL)
+                """;
+                    long cuentaId;
+                    try (var psId = cn.prepareStatement("INSERT INTO cuenta (socio_id) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM cuenta WHERE socio_id=?);")) {
+                        psId.setLong(1, socioId);
+                        psId.setLong(2, socioId);
+                        psId.executeUpdate();
+                    }
+                    try (var psSel = cn.prepareStatement("SELECT id FROM cuenta WHERE socio_id=?")) {
+                        psSel.setLong(1, socioId);
+                        try (var rs = psSel.executeQuery()) { rs.next(); cuentaId = rs.getLong(1); }
+                    }
+                    try (var psMov = cn.prepareStatement(SQL_MOV)) {
+                        psMov.setLong(1, cuentaId);
+                        psMov.setBigDecimal(2, importe.negate()); // débito
+                        psMov.executeUpdate();
                     }
                 }
-
-                // 4) Insertar movimiento: cargo de reactivación (NEGATIVO), inscripcion_id = NULL
-                try (var mov = cn.prepareStatement("""
-                INSERT INTO movimiento_cuenta
-                    (cuenta_id, fecha, tipo, descripcion, importe, referencia_ext, inscripcion_id)
-                VALUES (?, CURRENT_DATE, 'ALTA_SOCIO_CUOTA_CLUB',
-                        'Reactivación - Cuota Social', ?, NULL, NULL)
-            """)) {
-                    mov.setLong(1, cuentaId);
-                    mov.setBigDecimal(2, cuota.negate()); // cargo = negativo
-                    mov.executeUpdate();
-                }
+                cn.commit();
+                return true;
+            } catch (Exception ex) {
+                try { cn.rollback(); } catch (Exception ignore) {}
+                throw ex;
+            } finally {
+                try { cn.setAutoCommit(true); } catch (Exception ignore) {}
             }
-
-            cn.commit();
-            cn.setAutoCommit(true);
-            return true;
-        } catch (Exception e) {
-            throw e;
         }
     }
 

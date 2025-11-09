@@ -26,7 +26,7 @@
                     <TextField fx:id="txtDni" onAction="#onBuscarSocio" promptText="DNI del socio" HBox.hgrow="ALWAYS"/>
                     <Button text="Buscar" onAction="#onBuscarSocio"/>
                 </HBox>
-                <Label fx:id="lblSocio" style="-fx-text-fill: #2e7d32; -fx-font-style: italic; -fx-font-weight: bold;"/>
+                <Label fx:id="lblSocio" style="-fx-text-fill: black; -fx-font-weight: bold; -fx-font-size: 16px; -fx-font-style: normal;"/>
             </VBox>
             <!-- Saldo -->
             <Label text="Saldo actual:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>

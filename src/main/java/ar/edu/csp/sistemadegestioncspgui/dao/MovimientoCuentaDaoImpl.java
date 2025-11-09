@@ -30,8 +30,6 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         }
     }
 
-    // ---------- CRUD movimientos ----------
-
     @Override
     public Long insertar(MovimientoCuenta m) {
         validarTipoEnum(m.getTipo());
@@ -123,7 +121,6 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         registrarCargo(socioId, importe, descripcion, fecha, inscripcionId, tipoEnum);
     }
 
-    // ---------- Lecturas ----------
 
     @Override
     public BigDecimal obtenerSaldoPorSocio(Long socioId) {
@@ -205,8 +202,6 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         }
     }
 
-    // ---------- Cargos mensuales ----------
-
     @Override
     public boolean existeCargoMensual(Long socioId, String concepto, YearMonth periodo) {
         final String sql = """
@@ -243,7 +238,7 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         // --- 1) Cuota Social ---
         BigDecimal cuotaSocial;
         try {
-            cuotaSocial = parametrosDao.getDecimal("CUOTA_SOCIAL").orElse(BigDecimal.ZERO);
+            cuotaSocial = parametrosDao.getDecimal("CUOTA_MENSUAL_CLUB").orElse(BigDecimal.ZERO);
         } catch (Exception e) {
             cuotaSocial = BigDecimal.ZERO;
         }

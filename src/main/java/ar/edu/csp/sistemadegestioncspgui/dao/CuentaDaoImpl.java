@@ -163,16 +163,22 @@ public class CuentaDaoImpl implements CuentaDao {
     // El metodo registra un débito por alta del club al socio recién creado.
     public void registrarDebitoAltaClub(long socioId, BigDecimal importe) throws Exception {
         long cuentaId = ensureCuenta(socioId);
+
+        var hoy = java.time.LocalDate.now();
+        String desc = "Cuota Social " + String.format("%02d/%d", hoy.getMonthValue(), hoy.getYear());
+
         try (var cn = ds.getConnection();
              var ps = cn.prepareStatement("""
             INSERT INTO movimiento_cuenta (cuenta_id, tipo, descripcion, importe)
-            VALUES (?, 'ALTA_SOCIO_CUOTA_CLUB', 'Cuota de alta del club', ?)
+            VALUES (?, 'ALTA_SOCIO_CUOTA_CLUB', ?, ?)
          """)) {
             ps.setLong(1, cuentaId);
-            ps.setBigDecimal(2, importe.negate()); // invierte el signo de la deuda a negativo
+            ps.setString(2, desc);           // <== clave: coincide con el LIKE de existeCargoMensual
+            ps.setBigDecimal(3, importe.negate());
             ps.executeUpdate();
         }
     }
+
 
 
     // El metodo registrarMovimiendo garantiza la cuenta dentro de la misma transacción
