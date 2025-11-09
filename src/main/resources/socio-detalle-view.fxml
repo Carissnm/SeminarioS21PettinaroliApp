@@ -52,11 +52,15 @@
             </TableView>
 
             <HBox spacing="8" alignment="CENTER_RIGHT">
-                <Button text="Registrar/Actualizar apto médico" onAction="#onAptoMedico"/>
+                <Button text="Registrar apto médico" onAction="#onAptoMedico"/>
                 <Button fx:id="btnInscribir" text="Inscribir en actividad" onAction="#onInscribir"/>
                 <Button text="Registrar Pago" onAction="#onIrAPago"/>
-                <Button text="Dar de baja inscripción" onAction="#onDarBaja"/>
-                <Button fx:id="btnReactivar" text="Reactivar socio" onAction="#onReactivarSocio" visible="false" managed="false"/>
+                <Button text="Dar de baja actividad" onAction="#onDarBaja"/>
+                <Button text="Dar de baja del club" onAction="#onDarBajaSocio"/>
+                <Button fx:id="btnReactivar"
+                        text="Reactivar"
+                        onAction="#onReactivarSocio"
+                        visible="false" managed="false" />
             </HBox>
 
         </VBox>

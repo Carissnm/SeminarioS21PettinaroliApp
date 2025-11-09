@@ -7,9 +7,11 @@ import ar.edu.csp.sistemadegestioncspgui.model.Socio;
 //sin tener que encadenar parámetros por cada navegación
 //Guarda un único Socio estático (SocioActual) accesible desde cualquier controlador.
 //Se settea antes de navegar y se lee en la pantalla de destino. Cuando ya no se necesita se limpia explícitamente.
+
 public final class SelectionContext {
     //Estado global: último socio seleccionado en la Interfaz de Usuario
     private static Socio socioActual;
+    private static EntryPoint entryPoint = EntryPoint.DESCONOCIDO;
 
     //Utilidad, no instanciable.
     private SelectionContext() {}
@@ -47,5 +49,13 @@ public final class SelectionContext {
     }
     public static void setReturnToHomeAfterInscripcion(boolean v) {
         returnToHomeAfterInscripcion = v;
+    }
+
+
+    public static void setEntryPoint(EntryPoint ep) { entryPoint = ep; }
+    public static EntryPoint consumeEntryPoint() {
+        var ep = entryPoint;
+        entryPoint = EntryPoint.DESCONOCIDO; // se consume una sola vez
+        return ep;
     }
 }

@@ -4,113 +4,129 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.net.URL;
-
-// Utilidad centralizada para poder manejar la navegación entre vistas embebidas en FXML
-// dentro de un contenedor principal y un título de sección.
-// funciona cargando un fxml dentro del contenedor principal de la aplicación sin abrir nuevas ventanas.
 
 public final class Navigation {
-    //Contenedor principal donde se inyectan las vistas
-    private static StackPane container;
-    //Label donde se muestra el título de la sección actual
-    private static Label sectionLabel;
-    //Historial de vistas para poder "volver" (LIFO)
+
+    // ====== Config y estado ======
+    private static StackPane container;        // donde inyectamos las vistas (centerPane)
+    private static Label sectionLabel;         // título de sección
     private static final Deque<Node> history = new ArrayDeque<>();
 
-    //Clase utilitaria no instanciable
+    // Fallbacks
+    private static final String FALLBACK_FXML = "/home-view.fxml";
+    private static final String FALLBACK_TITLE = "Inicio";
+
     private Navigation() {}
 
-    //El metodo init inicializa el sistemad e navegación con el contenedor principal y el label de sección.
+    // ====== Inicialización ======
     public static void init(StackPane root, Label lbl) {
         container = root;
         sectionLabel = lbl;
     }
 
-    //Cambia el texto del título de sección si hay un label configurado.
+    // ====== Utilidades ======
     public static void setSectionTitle(String title) {
         if (sectionLabel != null) sectionLabel.setText(title);
     }
 
-    //Carga un FXML dentro del contenedor principal y actualiza el título de la sección.
-    //Apila la vista anterior en un "historial" para poder regresar.
+    // Normaliza y resuelve un recurso en el classpath
+    private static URL resolve(String fxmlPath) {
+        String normalized = (fxmlPath == null) ? "" : (fxmlPath.startsWith("/") ? fxmlPath : "/" + fxmlPath);
+        return Navigation.class.getResource(normalized);
+    }
+
+    private static void ensureInit() {
+        if (container == null) throw new IllegalStateException("Navigation no inicializado (falta init).");
+    }
+
+    private static void applyView(Node view, boolean pushHistory) {
+        if (!container.getChildren().isEmpty() && pushHistory) {
+            history.push(container.getChildren().get(0));
+        }
+        container.getChildren().setAll(view);
+    }
+
+    private static void invokeOnShow(FXMLLoader loader) {
+        Object controller = loader.getController();
+        if (controller instanceof ViewOnShow v) {
+            javafx.application.Platform.runLater(v::onShow);
+        }
+    }
+
+    private static void loadInternal(String fxmlPath, String title, boolean pushHistory) {
+        ensureInit();
+
+        URL url = resolve(fxmlPath);
+        if (url == null) {
+            // Fallback silencioso a HOME en lugar de romper
+            url = resolve(FALLBACK_FXML);
+            title = FALLBACK_TITLE;
+            if (url == null) {
+                throw new RuntimeException("No se encontró el FXML solicitado ni el fallback: "
+                        + fxmlPath + " / " + FALLBACK_FXML);
+            }
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(url);
+            Node view = loader.load();
+            applyView(view, pushHistory);
+            if (title != null && !title.isBlank()) setSectionTitle(title);
+            invokeOnShow(loader);
+        } catch (IOException e) {
+            // Si algo falla en la carga, intentamos fallback UNA vez
+            if (!FALLBACK_FXML.equals(fxmlPath)) {
+                loadInternal(FALLBACK_FXML, FALLBACK_TITLE, pushHistory);
+            } else {
+                throw new RuntimeException("No fue posible cargar " + fxmlPath + " ni fallback.", e);
+            }
+        }
+    }
+
+    // ====== API pública ======
+    /** Carga y APILA en historial (para ir y volver). */
     public static void loadInMain(String fxmlPath, String sectionTitle) {
-        if (container == null) throw new IllegalStateException("Navigation no inicializado");
-        String normalized = fxmlPath.startsWith("/") ? fxmlPath : "/" + fxmlPath;
-        URL url = Navigation.class.getResource(normalized);
-        if (url == null) {
-            throw new RuntimeException("FXML no encontrado en classpath: " + normalized +
-                    "\nVerifica el nombre del archivo y que esté en resources.");
-        }
-        try {
-            FXMLLoader loader = new FXMLLoader(url);
-            Node view = loader.load();
-            if (!container.getChildren().isEmpty()) history.push(container.getChildren().get(0));
-            container.getChildren().setAll(view);
-            setSectionTitle(sectionTitle);
-
-            Object controller = loader.getController();
-            if (controller instanceof ViewOnShow v) {
-                // Corre después del primer layout: no bloquea la carga visual
-                javafx.application.Platform.runLater(v::onShow);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("No fue posible cargar " + normalized, e);
-        }
+        loadInternal(fxmlPath, sectionTitle, true);
     }
 
-    //cargar sin apilar (para "Guardar" / "Cancelar")
+    /** Carga REEMPLAZANDO (sin apilar). Ideal para Guardar/Cancelar o entradas “limpias”. */
     public static void loadInMainReplace(String fxmlPath, String sectionTitle) {
-        if (container == null) throw new IllegalStateException("Navigation no inicializado");
-        String normalized = fxmlPath.startsWith("/") ? fxmlPath : "/" + fxmlPath;
-        URL url = Navigation.class.getResource(normalized);
-        if (url == null) {
-            throw new RuntimeException("FXML no encontrado en classpath: " + normalized);
-        }
-        try {
-            FXMLLoader loader = new FXMLLoader(url);
-            Node view = loader.load();
-            // ojo: NO pusheamos history
-            container.getChildren().setAll(view);
-            setSectionTitle(sectionTitle);
-
-            Object controller = loader.getController();
-            if (controller instanceof ViewOnShow v) {
-                javafx.application.Platform.runLater(v::onShow);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("No fue posible cargar " + normalized, e);
-        }
+        loadInternal(fxmlPath, sectionTitle, false);
     }
 
-    // limpiar historial y cargar (para entrar al módulo)
+    /** Limpia historial y carga (entrada a un módulo). */
     public static void loadInMainReset(String fxmlPath, String sectionTitle) {
         clearHistory();
         loadInMainReplace(fxmlPath, sectionTitle);
     }
 
-    // utilitario
     public static void clearHistory() {
         history.clear();
     }
 
-    //El metodo back() permite volver a la vista anterior cuando existe el historial
+    /** Volver si hay historial; si no, ir a fallback HOME. */
     public static void back() {
-        if (!history.isEmpty() && container != null) {
+        ensureInit();
+        if (!history.isEmpty()) {
             container.getChildren().setAll(history.pop());
+        } else {
+            loadInMainReplace(FALLBACK_FXML, FALLBACK_TITLE);
         }
     }
 
-    //El metodo backOr intenta volver. En caso de no haber historial carga la vista fallback y settea su título.
+    /** Volver si hay historial; si no, ir al fallback indicado (con fallback final a HOME). */
     public static void backOr(String fallbackFxml, String sectionTitle) {
-        if (container != null && !history.isEmpty()) {
+        ensureInit();
+        if (!history.isEmpty()) {
             container.getChildren().setAll(history.pop());
             return; // preserva el título previo
         }
-        loadInMain(fallbackFxml, sectionTitle);
+        // Si el fallback falla, se aplica el fallback HOME internamente
+        loadInMainReplace(fallbackFxml, sectionTitle);
     }
-
 }

@@ -75,6 +75,7 @@ public class SociosListController extends BaseController {
         //Abre la vista de detalle del socio seleccionado
         Socio s = tblSocios.getSelectionModel().getSelectedItem();
         if (s == null) { info("Seleccione un socio para abrir."); return; }
+        SelectionContext.setEntryPoint(EntryPoint.LISTA);
         SelectionContext.setSocioActual(s); //Context global para pasar el socio a la siguiente vista.
         Navigation.loadInMain("/socio-detalle-view.fxml", "Socios");
     }
@@ -95,6 +96,32 @@ public class SociosListController extends BaseController {
         }
         SelectionContext.setSocioActual(s);
         Navigation.loadInMain("/socio-form-view.fxml", "Socios"); // ✅ embebido
+    }
+
+    @FXML private void onReactivar() {
+        Socio s = tblSocios.getSelectionModel().getSelectedItem();
+        if (s == null) { info("Seleccione un socio."); return; }
+        if (s.getEstado() == EstadoSocio.ACTIVO) { info("Ese socio ya está ACTIVO."); return; }
+
+        var conf = new Alert(Alert.AlertType.CONFIRMATION,
+                "¿Reactivar al socio " + s.getNombreCompleto() + "?", ButtonType.YES, ButtonType.NO);
+        conf.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    boolean ok = socioDao.reactivarSocio(s.getId());
+                    if (ok) {
+                        s.setEstado(EstadoSocio.ACTIVO);
+                        s.setFechaBaja(null);
+                        tblSocios.refresh();
+                        info("Socio reactivado.");
+                    } else {
+                        error("No fue posible reactivar el socio.");
+                    }
+                } catch (Exception e) {
+                    error("Error al reactivar:\n" + e.getMessage());
+                }
+            }
+        });
     }
 
     @FXML private void onEliminar() {
@@ -126,8 +153,7 @@ public class SociosListController extends BaseController {
     }
 
     @FXML private void onVolver() {
-        //Vuelve atrás si existe historial y si no carga el menú principal de socios.
-        Navigation.backOr("/socios-menu-view.fxml", "Socios");
+        Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
     }
 
     // Convierte null a " " para evitar celdas con "null"

@@ -19,36 +19,30 @@
                 <ColumnConstraints minWidth="170"/>
                 <ColumnConstraints hgrow="ALWAYS"/>
             </columnConstraints>
-
             <!-- Socio -->
             <Label text="Socio:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-            <HBox spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
-                <TextField fx:id="txtDni" onAction="#onBuscarSocio" promptText="DNI del socio" HBox.hgrow="ALWAYS"/>
-                <Button text="Buscar" onAction="#onBuscarSocio"/>
-                <Label fx:id="lblSocio" style="-fx-text-fill: #2e7d32; -fx-font-style: italic;"/>
-            </HBox>
-
+            <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                <HBox spacing="8" fx:id="boxBusqueda">
+                    <TextField fx:id="txtDni" onAction="#onBuscarSocio" promptText="DNI del socio" HBox.hgrow="ALWAYS"/>
+                    <Button text="Buscar" onAction="#onBuscarSocio"/>
+                </HBox>
+                <Label fx:id="lblSocio" style="-fx-text-fill: #2e7d32; -fx-font-style: italic; -fx-font-weight: bold;"/>
+            </VBox>
             <!-- Saldo -->
             <Label text="Saldo actual:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
             <Label fx:id="lblSaldo" GridPane.rowIndex="1" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
-
-
             <fx:define>
                 <ToggleGroup fx:id="tgTipo"/>
             </fx:define>
-
             <!-- Actividad -->
             <Label text="Actividad:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
             <ComboBox fx:id="cbActividad" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="320"/>
-
             <!-- Deuda de la actividad -->
             <Label text="Deuda de la actividad:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
             <Label fx:id="lblDeudaAct" GridPane.rowIndex="4" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
-
-            <!--  Deuda de cuota del club -->
+            <!-- Deuda de cuota del club -->
             <Label text="Deuda cuota del club:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
             <Label fx:id="lblDeudaClub" GridPane.rowIndex="5" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
-
             <!-- Tipo de pago -->
             <Label text="Tipo de pago:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
             <HBox spacing="12" GridPane.rowIndex="6" GridPane.columnIndex="1">
@@ -58,11 +52,9 @@
             <!-- Importe -->
             <Label text="Importe:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
             <TextField fx:id="txtImporte" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
-
             <!-- Descripción -->
             <Label text="Descripción:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
             <TextField fx:id="txtDescripcion" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
-
         </GridPane>
     </center>
 

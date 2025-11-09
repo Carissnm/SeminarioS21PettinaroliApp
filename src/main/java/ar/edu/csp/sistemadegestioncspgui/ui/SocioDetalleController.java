@@ -66,24 +66,31 @@ public class SocioDetalleController extends BaseController {
         // 4) Apto médico
         cargarAptoMedico(socio);
 
-        // 5) Saldos: Club / Actividades / Total
+        // 5) Saldos: Club / Actividades (solo ACTIVAS) / Total
         try {
             var cuentaDao = new ar.edu.csp.sistemadegestioncspgui.dao.CuentaDaoImpl();
 
-            var saldoClub   = cuentaDao.saldoCuotaClub(socio.getId()); // +crédito / -deuda
-            var saldoTotal  = cuentaDao.saldo(socio.getId());          // club + actividades
-            var saldoActiv  = saldoTotal.subtract(saldoClub);          // parte de actividades
+            // saldo firmado del club (movimientos con inscripcion_id IS NULL)
+            java.math.BigDecimal saldoClub = cuentaDao.saldoCuotaClub(socio.getId());
 
-            // Convertimos a “deuda” (solo magnitud del negativo)
-            java.math.BigDecimal deudaClub  = saldoClub.signum() < 0 ? saldoClub.negate() : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal deudaActiv = saldoActiv.signum() < 0 ? saldoActiv.negate() : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal deudaTotal = saldoTotal.signum() < 0 ? saldoTotal.negate() : java.math.BigDecimal.ZERO;
+            // saldo de ACTIVIDADES = suma de saldos por inscripción ACTIVA (firmados)
+            var inscripciones = inscDao.listarPorSocio(socio.getId());
+            java.math.BigDecimal saldoActiv = java.math.BigDecimal.ZERO;
+            for (var i : inscripciones) {
+                boolean activa = i.getFechaBaja() == null &&
+                        (i.getEstado() == null || "ACTIVA".equals(i.getEstado().name()));
+                if (!activa) continue;
+                saldoActiv = saldoActiv.add(cuentaDao.saldoPorInscripcion(i.getId()));
+            }
+
+            // total firmado (mismo criterio que la tabla)
+            java.math.BigDecimal saldoTotal = saldoClub.add(saldoActiv);
 
             lblEstadoSaldo.setText(
                     (socio.getEstado()==null? "" : socio.getEstado().name()) +
-                            " | Club: " + (deudaClub.signum()>0 ? "-" + money.format(deudaClub) : money.format(java.math.BigDecimal.ZERO)) +
-                            " | Actividades: " + (deudaActiv.signum()>0 ? "-" + money.format(deudaActiv) : money.format(java.math.BigDecimal.ZERO)) +
-                            " | Total: " + (deudaTotal.signum()>0 ? "-" + money.format(deudaTotal) : money.format(java.math.BigDecimal.ZERO))
+                            " | Club: " + money.format(saldoClub) +
+                            " | Actividades: " + money.format(saldoActiv) +
+                            " | Total: " + money.format(saldoTotal)
             );
         } catch (Exception e) {
             lblEstadoSaldo.setText("Error al obtener saldos");
@@ -114,16 +121,11 @@ public class SocioDetalleController extends BaseController {
 
                 String texto;
                 if (insc.getId() != null && insc.getId() == CLUB_ROW_ID) {
-                    // Fila “Cuota del club”: mostrar DEUDA (con signo negativo para que pinte rojo)
-                    var saldoClub = cuentaDao.saldoCuotaClub(socio.getId()); // +crédito / -deuda
-                    var deudaClub  = (saldoClub.signum() < 0) ? saldoClub.negate() : java.math.BigDecimal.ZERO;
-
-                    texto = (deudaClub.signum() > 0)
-                            ? "-" + money.format(deudaClub)
-                            : money.format(java.math.BigDecimal.ZERO);
+                    var saldoClub = cuentaDao.saldoCuotaClub(socio.getId()); // firmado
+                    texto = money.format(saldoClub);
                 } else {
                     // Actividad: mostrar saldo de la inscripción
-                    var saldoAct = cuentaDao.saldoPorInscripcion(insc.getId());
+                    var saldoAct = cuentaDao.saldoPorInscripcion(insc.getId()); // firmado
                     texto = money.format(saldoAct);
                 }
 
@@ -186,12 +188,12 @@ public class SocioDetalleController extends BaseController {
         }
     }
 
-    // --------- Cargos Mensuales (idempotente) ---------
+    // --------- Cargos Mensuales ---------
     private void asegurarCargosDelMes(Socio socio) {
         try {
             mcDao.generarCargosMensuales(socio.getId(), YearMonth.now());
         } catch (RuntimeException ex) {
-            // No rompemos la UI por esto; log simple
+
             System.err.println("No se pudieron generar cargos del mes: " + ex.getMessage());
         }
     }
@@ -241,6 +243,36 @@ public class SocioDetalleController extends BaseController {
         Navigation.loadInMain("/inscripcion-menu-view.fxml","Inscripciones");
     }
 
+    //Baja del club
+    @FXML private void onDarBajaSocio() {
+        if (socio == null) { warn("No hay socio cargado."); return; }
+        if (socio.getEstado() == EstadoSocio.INACTIVO) { info("El socio ya está INACTIVO."); return; }
+
+        var conf = new Alert(Alert.AlertType.CONFIRMATION,
+                "¿Confirmás dar de baja al socio " + socio.getNombreCompleto() + " del club?",
+                ButtonType.YES, ButtonType.NO);
+
+        conf.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.YES) {
+                try {
+                    SocioDao socioDao = new SocioDaoImpl();
+                    boolean ok = socioDao.eliminar(socio.getId()); // tu baja lógica existente
+                    if (ok) {
+                        socio.setEstado(EstadoSocio.INACTIVO);
+                        socio.setFechaBaja(java.time.LocalDate.now());
+                        refrescarBotoneraPorEstado();
+                        info("Socio dado de baja.");
+                    } else {
+                        error("No fue posible dar de baja el socio.");
+                    }
+                } catch (Exception e) {
+                    error("Error al dar de baja:\n" + e.getMessage());
+                }
+            }
+        });
+    }
+
+    //Baja de actividades
     @FXML
     private void onDarBaja() {
         var sel = tblInscripciones.getSelectionModel().getSelectedItem();
@@ -322,7 +354,9 @@ public class SocioDetalleController extends BaseController {
 
     @FXML
     private void onReactivarSocio() {
-        if (socio == null) { warn("No hay socio cargado."); return; }
+        if (socio == null) {
+            warn("No hay socio cargado."); return;
+        }
         if (socio.getEstado() == EstadoSocio.ACTIVO) { info("El socio ya está ACTIVO."); return; }
 
         var conf = new Alert(Alert.AlertType.CONFIRMATION,
@@ -332,17 +366,36 @@ public class SocioDetalleController extends BaseController {
             if (bt == ButtonType.YES) {
                 try {
                     SocioDao socioDao = new SocioDaoImpl();
-                    boolean ok = socioDao.reactivarSocio(socio.getId());  // <<< AQUÍ
+                    boolean ok = socioDao.reactivarSocio(socio.getId());
                     if (ok) {
                         socio.setEstado(EstadoSocio.ACTIVO);
-                        refrescarBotoneraPorEstado();  // habilita Inscribir, oculta Reactivar
+                        refrescarBotoneraPorEstado();
 
                         lblEstadoSaldo.setText(
                                 (socio.getEstado()==null? "" : socio.getEstado().name()) +
                                         " | " + lblEstadoSaldo.getText().replaceFirst("^(ACTIVO|INACTIVO) \\|\\s*", "")
                         );
 
-                        info("Socio reactivado con éxito.");
+                        try {
+                            // 1) Traer monto de CUOTA_SOCIAL
+                            var parametrosDao = new ParametrosDaoImpl();
+                            var cuota = parametrosDao.getDecimal("CUOTA_SOCIAL").orElse(java.math.BigDecimal.ZERO);
+
+                            if (cuota.signum() > 0) {
+                                // 2) Evitar duplicar el cargo del mes
+                                var mcDao = new MovimientoCuentaDaoImpl();
+                                var periodo = java.time.YearMonth.now();
+                                boolean yaCobreEsteMes = mcDao.existeCargoMensual(socio.getId(), "Cuota Social", periodo);
+
+                                if (!yaCobreEsteMes) {
+                                    // 3) Registrar cargo de club en NEGATIVO (inscripcion_id = NULL)
+                                    var cuentaDao = new CuentaDaoImpl();
+                                    cuentaDao.registrarDebitoAltaClub(socio.getId(), cuota);
+                                }
+                            }
+                        } catch (Exception ex) {
+                            warn("Socio reactivado, pero no se pudo generar la deuda de club: " + ex.getMessage());
+                        }
                     } else {
                         error("No fue posible reactivar al socio.");
                     }
@@ -358,11 +411,10 @@ public class SocioDetalleController extends BaseController {
 
     @FXML
     private void onVolver() {
-        if (SelectionContext.isSkipOldDetalleOnce()) {
-            SelectionContext.setSkipOldDetalleOnce(false);
-            Navigation.loadInMainReplace("/socios-list-view.fxml", "Socios");
-        } else {
-            Navigation.backOr("/socios-list-view.fxml", "Socios");
+        EntryPoint ep = SelectionContext.consumeEntryPoint();
+        switch (ep) {
+            case LISTA -> Navigation.loadInMainReplace("/socios-list-view.fxml", "Socios");
+            default    -> Navigation.loadInMainReplace("/home-view.fxml", "Inicio");
         }
     }
 }

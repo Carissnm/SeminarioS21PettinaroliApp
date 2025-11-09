@@ -99,8 +99,9 @@ public class SociosBuscarController extends BaseController {
 
     private void abrir(Socio s) {
         //Carga el detalle del socio en la pantalla de detalle
+        SelectionContext.setEntryPoint(EntryPoint.BUSQUEDA);
         SelectionContext.setSocioActual(s);
-        Navigation.loadInMain("/socio-detalle-view.fxml", "Socios");
+        Navigation.loadInMainReplace("/socio-detalle-view.fxml", "Socios");
     }
 
     @FXML private void onNuevo() {

@@ -1,9 +1,9 @@
 package ar.edu.csp.sistemadegestioncspgui.dao;
 
 import ar.edu.csp.sistemadegestioncspgui.db.DataSourceFactory;
-import ar.edu.csp.sistemadegestioncspgui.model.Actividad;
 import ar.edu.csp.sistemadegestioncspgui.model.MovimientoCuenta;
-import java.util.Set;
+import ar.edu.csp.sistemadegestioncspgui.model.Inscripcion;
+
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
@@ -11,6 +11,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
 
@@ -23,30 +24,17 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
             "BAJA_REINTEGRO"
     );
 
-    final String sql = """
-    SELECT COALESCE(SUM(CASE
-              WHEN mc.tipo IN ('PAGO','AJUSTE_CREDITO','BAJA_REINTEGRO') THEN mc.importe    -- créditos (+)
-              WHEN mc.tipo IN ('ALTA_SOCIO_CUOTA_CLUB','INSCRIPCION_ACTIVIDAD','AJUSTE_DEBITO') THEN -mc.importe -- débitos (-)
-              ELSE 0 END), 0) AS saldo
-    FROM cuenta c
-    LEFT JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
-    WHERE c.socio_id = ?
-""";
-
-
     private static void validarTipoEnum(String tipo) {
         if (tipo == null || !TIPOS_VALIDOS.contains(tipo)) {
-            throw new IllegalArgumentException(
-                    "Tipo de movimiento inválido '" + tipo + "'. Debe ser uno de: " + TIPOS_VALIDOS
-            );
+            throw new IllegalArgumentException("Tipo de movimiento inválido '" + tipo + "'. Válidos: " + TIPOS_VALIDOS);
         }
     }
 
+    // ---------- CRUD movimientos ----------
+
     @Override
     public Long insertar(MovimientoCuenta m) {
-
         validarTipoEnum(m.getTipo());
-
         final String sql = """
             INSERT INTO movimiento_cuenta (cuenta_id, fecha, tipo, descripcion, importe, referencia_ext, inscripcion_id)
             VALUES (?,?,?,?,?,?,?)
@@ -56,7 +44,7 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
 
             ps.setLong(1, m.getCuentaId());
             ps.setDate(2, Date.valueOf(m.getFecha() != null ? m.getFecha() : LocalDate.now()));
-            ps.setString(3, m.getTipo()); // "CREDITO" o "DEBITO"
+            ps.setString(3, m.getTipo());
             ps.setString(4, m.getDescripcion());
             ps.setBigDecimal(5, m.getImporte());
             ps.setString(6, m.getReferenciaExt());
@@ -68,23 +56,19 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
             }
             return null;
         } catch (SQLException e) {
-            String msg = String.format(
-                    "Error al insertar movimiento (sqlState=%s, errorCode=%d): %s",
-                    e.getSQLState(), e.getErrorCode(), e.getMessage()
-            );
-            throw new RuntimeException(msg, e);
+            throw new RuntimeException("Error al insertar movimiento: " + e.getMessage(), e);
         }
     }
 
     @Override
     public Long registrarPago(Long socioId, BigDecimal importe, String descripcion, LocalDate fecha) {
-        if (importe == null || importe.signum() <= 0) {
+        if (importe == null || importe.signum() <= 0)
             throw new IllegalArgumentException("El importe del pago debe ser positivo.");
-        }
+
         Long cuentaId = ensureCuentaParaSocio(socioId);
         MovimientoCuenta m = new MovimientoCuenta(
                 cuentaId,
-                fecha != null ? fecha : LocalDate.now(),
+                (fecha != null ? fecha : LocalDate.now()),
                 "PAGO",
                 (descripcion != null && !descripcion.isBlank()) ? descripcion : "Pago",
                 importe,
@@ -94,59 +78,57 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         return insertar(m);
     }
 
-
-
     @Override
     public Long registrarCargo(Long socioId, BigDecimal importe, String descripcion, LocalDate fecha, Long inscripcionId) {
+        if (importe == null || importe.signum() <= 0)
+            throw new IllegalArgumentException("El importe del cargo debe ser positivo.");
+
         Long cuentaId = ensureCuentaParaSocio(socioId);
         MovimientoCuenta m = new MovimientoCuenta(
                 cuentaId,
-                fecha != null ? fecha : LocalDate.now(),
+                (fecha != null ? fecha : LocalDate.now()),
                 "AJUSTE_DEBITO",
                 (descripcion != null && !descripcion.isBlank()) ? descripcion : "Cargo",
-                importe,
+                importe.negate(),    // CARGO = negativo
                 null,
                 inscripcionId
         );
         return insertar(m);
     }
 
-
-    public Long registrarCargo(Long socioId, BigDecimal importe, String descripcion,
-                               LocalDate fecha, Long inscripcionId, String tipoEnum) {
-        if (importe == null || importe.signum() <= 0) {
+    private Long registrarCargo(Long socioId, BigDecimal importe, String descripcion,
+                                LocalDate fecha, Long inscripcionId, String tipoEnum) {
+        if (importe == null || importe.signum() <= 0)
             throw new IllegalArgumentException("El importe del cargo debe ser positivo.");
-        }
-        if (tipoEnum == null || tipoEnum.isBlank()) {
-            throw new IllegalArgumentException("Debe indicarse un tipo de movimiento válido (ENUM).");
-        }
+        validarTipoEnum(tipoEnum);
         Long cuentaId = ensureCuentaParaSocio(socioId);
         MovimientoCuenta m = new MovimientoCuenta(
                 cuentaId,
-                fecha != null ? fecha : LocalDate.now(),
+                (fecha != null ? fecha : LocalDate.now()),
                 tipoEnum,
                 (descripcion != null && !descripcion.isBlank()) ? descripcion : "Cargo",
-                importe,
+                importe.negate(),
                 null,
                 inscripcionId
         );
         return insertar(m);
     }
 
-    private void registrarCargoMensual(Long socioId, BigDecimal importe, String descripcion,
-                                       LocalDate fecha, String tipoEnum, Long inscripcionId) {
+    private void registrarCargoMensual(Long socioId,
+                                       BigDecimal importe,
+                                       String descripcion,
+                                       LocalDate fecha,
+                                       String tipoEnum,
+                                       Long inscripcionId) {
         registrarCargo(socioId, importe, descripcion, fecha, inscripcionId, tipoEnum);
     }
 
-
+    // ---------- Lecturas ----------
 
     @Override
     public BigDecimal obtenerSaldoPorSocio(Long socioId) {
         final String sql = """
-            SELECT COALESCE(SUM(CASE
-                      WHEN mc.tipo='CREDITO' THEN mc.importe
-                      WHEN mc.tipo='DEBITO'  THEN -mc.importe
-                      ELSE 0 END), 0) AS saldo
+            SELECT COALESCE(SUM(mc.importe),0) AS saldo
             FROM cuenta c
             LEFT JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
             WHERE c.socio_id = ?
@@ -155,8 +137,7 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setLong(1, socioId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getBigDecimal("saldo");
-                return BigDecimal.ZERO;
+                return rs.next() ? rs.getBigDecimal("saldo") : BigDecimal.ZERO;
             }
         } catch (SQLException e) {
             throw new RuntimeException("Error obteniendo saldo del socio", e);
@@ -183,7 +164,8 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
                     MovimientoCuenta m = new MovimientoCuenta();
                     m.setId(rs.getLong("id"));
                     m.setCuentaId(rs.getLong("cuenta_id"));
-                    m.setFecha(rs.getDate("fecha").toLocalDate());
+                    Date f = rs.getDate("fecha");
+                    m.setFecha(f != null ? f.toLocalDate() : null);
                     m.setTipo(rs.getString("tipo"));
                     m.setDescripcion(rs.getString("descripcion"));
                     m.setImporte(rs.getBigDecimal("importe"));
@@ -223,46 +205,38 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         }
     }
 
+    // ---------- Cargos mensuales ----------
+
     @Override
     public boolean existeCargoMensual(Long socioId, String concepto, YearMonth periodo) {
         final String sql = """
-        SELECT 1
-          FROM cuenta c
-          JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
-         WHERE c.socio_id = ?
-           AND mc.descripcion LIKE ?
-           AND mc.fecha BETWEEN ? AND ?
-         LIMIT 1
-    """;
-
+            SELECT 1
+              FROM cuenta c
+              JOIN movimiento_cuenta mc ON mc.cuenta_id = c.id
+             WHERE c.socio_id = ?
+               AND mc.descripcion LIKE ?
+               AND mc.fecha BETWEEN ? AND ?
+             LIMIT 1
+        """;
         LocalDate desde = periodo.atDay(1);
         LocalDate hasta = periodo.atEndOfMonth();
-
         String like = concepto + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()) + "%";
 
         try (Connection con = DataSourceFactory.get().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
             ps.setLong(1, socioId);
             ps.setString(2, like);
             ps.setDate(3, Date.valueOf(desde));
             ps.setDate(4, Date.valueOf(hasta));
-
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
         } catch (SQLException e) {
             throw new RuntimeException("Error verificando cargo mensual", e);
         }
     }
 
-
-
     @Override
     public void generarCargosMensuales(Long socioId, YearMonth periodo) {
         LocalDate fechaCargo = periodo.atEndOfMonth();
-
         var parametrosDao = new ParametrosDaoImpl();
         var inscDao = new InscripcionDaoImpl();
 
@@ -271,48 +245,51 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         try {
             cuotaSocial = parametrosDao.getDecimal("CUOTA_SOCIAL").orElse(BigDecimal.ZERO);
         } catch (Exception e) {
-            cuotaSocial = BigDecimal.ZERO; // no frenamos todo si falla la param
+            cuotaSocial = BigDecimal.ZERO;
         }
-
         if (cuotaSocial.signum() > 0) {
-            String concepto = "Cuota Social";
-            if (!existeCargoMensual(socioId, concepto, periodo)) {
+            String conceptoClub = "Cuota Social";
+            if (!existeCargoMensual(socioId, conceptoClub, periodo)) {
                 registrarCargoMensual(
                         socioId,
-                        cuotaSocial,
-                        concepto + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()),
+                        cuotaSocial,  // positivo -> se guarda NEGATIVO
+                        conceptoClub + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()),
                         fechaCargo,
-                        "ALTA_SOCIO_CUOTA_CLUB",   // <<< ENUM correcto
-                        null                       // inscripcion_id = null (cargo del club)
+                        "ALTA_SOCIO_CUOTA_CLUB",
+                        null
                 );
             }
         }
 
-        // --- 2) Actividades vigentes ---
-        List<Actividad> actividades;
+        // --- 2) Actividades --
+        List<Inscripcion> inscs;
         try {
-            actividades = inscDao.listarActividadesVigentesPorSocio(socioId);
+            inscs = inscDao.listarPorSocio(socioId);
         } catch (Exception e) {
-            actividades = Collections.emptyList();
+            inscs = Collections.emptyList();
         }
 
-        for (var act : actividades) {
-            BigDecimal precio = act.getPrecioDefault();
+        for (var insc : inscs) {
+            boolean activa = insc.getFechaBaja() == null
+                    && (insc.getEstado() == null || "ACTIVA".equals(insc.getEstado().name()));
+            if (!activa) continue;
+
+            BigDecimal precio = insc.getCuotaMensual();
             if (precio == null || precio.signum() <= 0) continue;
 
-            String concepto = "Cuota Actividad " + act.getNombre();
-            if (!existeCargoMensual(socioId, concepto, periodo)) {
+            String nombre = (insc.getActividadNombre() == null ? "(actividad)" : insc.getActividadNombre());
+            String conceptoAct = "Cuota Actividad " + nombre;
+
+            if (!existeCargoMensual(socioId, conceptoAct, periodo)) {
                 registrarCargoMensual(
                         socioId,
-                        precio,
-                        concepto + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()),
+                        precio, // positivo -> se guarda NEGATIVO
+                        conceptoAct + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()),
                         fechaCargo,
-                        "INSCRIPCION_ACTIVIDAD",   // <<< ENUM correcto
-                        null // si tenés el inscripcion_id de esa actividad, pásalo acá; si no, dejalo null
+                        "INSCRIPCION_ACTIVIDAD",
+                        insc.getId() // ⬅️ imputado a la inscripción
                 );
             }
         }
     }
-
 }
-
