@@ -313,7 +313,9 @@ public class PagoFormController extends BaseController implements ViewOnShow {
             // 3) Registrar pago (club vs actividad)
             if (rbActividad.isSelected()) {
                 var a = cbActividad.getValue();
-                if (a == null) { warn("Seleccione una actividad para pagar."); return; }
+                if (a == null) { warn("Seleccione una actividad para pagar.");
+                    return;
+                }
 
                 Long inscId = inscripcionIdSel;
                 if (inscId == null) {
@@ -475,6 +477,10 @@ public class PagoFormController extends BaseController implements ViewOnShow {
     }
 
 
-    @FXML private void onCancelar() { volverSegunOrigen(); }
-    @FXML private void onVolver()   { volverSegunOrigen(); }
+    @FXML private void onCancelar() {
+        volverSegunOrigen();
+    }
+    @FXML private void onVolver()   {
+        volverSegunOrigen();
+    }
 }

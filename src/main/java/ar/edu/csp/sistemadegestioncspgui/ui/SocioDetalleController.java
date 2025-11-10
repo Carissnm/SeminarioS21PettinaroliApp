@@ -374,7 +374,9 @@ public class SocioDetalleController extends BaseController {
                         warn("Socio reactivado. Cuenta no actualizada: " + ex.getMessage());
                     }
 
-                    try { mcDao.generarCargosMensuales(socio.getId(), YearMonth.now()); } catch (Exception ignore) {}
+                    try {
+                        mcDao.generarCargosMensuales(socio.getId(), YearMonth.now());
+                    } catch (Exception ignore) {}
 
                     // refrescar header/tabla
                     try {

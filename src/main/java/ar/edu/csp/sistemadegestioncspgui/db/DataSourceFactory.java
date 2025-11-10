@@ -22,13 +22,11 @@ public final class DataSourceFactory {
             c.setJdbcUrl(p.getProperty("db.url")); // cadena JDBC
             c.setUsername(p.getProperty("db.user")); // usuario de la base de datos
             c.setPassword(p.getProperty("db.password")); // contraseña de la base de datos
-
             // Tamaño del pool
             // Máximo de conexiones simultáneas
             c.setMaximumPoolSize(Integer.parseInt(p.getProperty("db.pool.maxSize", "5")));
             // Mínimo de conexiones ociosas que se mantienen preparadas.
             c.setMinimumIdle(Integer.parseInt(p.getProperty("db.pool.minIdle", "1")));
-
             // Timeouts / health del pool
             // Tiempo máximo a esperar una conexión libre antes de lanzar excepción
             c.setConnectionTimeout(Long.parseLong(p.getProperty("db.pool.connectionTimeoutMs", "10000"))); // esperar por una conexión
@@ -40,12 +38,10 @@ public final class DataSourceFactory {
             c.setMaxLifetime(Long.parseLong(p.getProperty("db.pool.maxLifetimeMs", "1500000")));           // reciclar antes de wait_timeout
             // Keepalive para despertar conexiones inactivas y evitar cierre por el servidor
             c.setKeepaliveTime(Long.parseLong(p.getProperty("db.pool.keepaliveMs", "60000")));             // evita que se “duerman”
-
             // Validación a través de una query para testear conexiones.
             if (Boolean.parseBoolean(p.getProperty("db.pool.useTestQuery", "true"))) {
                 c.setConnectionTestQuery(p.getProperty("db.pool.testQuery", "SELECT 1"));
             }
-
             // Declaración del driver JDBC
             c.setDriverClassName(p.getProperty("db.driver", "com.mysql.cj.jdbc.Driver"));
             // Se crea el DataSource del pool con la configuración previa.
@@ -53,7 +49,6 @@ public final class DataSourceFactory {
         }
         return ds; // Siempre devuelve la misma instancia compartida
     }
-
     // Este metodo carga un archivo .properties del classpath y lo retorna como tipo Properties
     private static Properties load(String file) {
         try (InputStream in = DataSourceFactory.class.getClassLoader().getResourceAsStream(file)) {

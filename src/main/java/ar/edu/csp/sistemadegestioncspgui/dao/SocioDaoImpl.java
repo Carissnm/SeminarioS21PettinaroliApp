@@ -206,8 +206,6 @@ public class SocioDaoImpl implements SocioDao {
         }
     }
 
-
-
     @Override
     public long crear(Socio s) throws SQLException {
         /* Se inserta un nuevo socio y se devuelve el id generado
@@ -392,7 +390,4 @@ public class SocioDaoImpl implements SocioDao {
             return ps.executeUpdate() > 0;
         }
     }
-
-
-
 }

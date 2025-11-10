@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.geometry.Insets?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="ar.edu.csp.sistemadegestioncspgui.ui.SocioDetalleController"
@@ -50,7 +49,6 @@
                 </columns>
                 <placeholder><Label text="El socio no tiene inscripciones."/></placeholder>
             </TableView>
-
             <HBox spacing="8" alignment="CENTER_RIGHT">
                 <Button text="Registrar apto médico" onAction="#onAptoMedico"/>
                 <Button fx:id="btnInscribir" text="Inscribir en actividad" onAction="#onInscribir"/>
@@ -62,8 +60,6 @@
                         onAction="#onReactivarSocio"
                         visible="false" managed="false" />
             </HBox>
-
         </VBox>
     </center>
-
 </BorderPane>
