@@ -189,9 +189,6 @@ public class InscripcionFormController extends BaseController implements ViewOnS
         }
 
         try {
-            // Aseguramos cargos mensuales (idempotente)
-            mcDao.generarCargosMensuales(socioSel.getId(), YearMonth.now());
-
             // Saldos
             BigDecimal saldoClub  = cuentaDao.saldoCuotaClub(socioSel.getId()); // +crédito / -deuda
             BigDecimal saldoTotal = cuentaDao.saldo(socioSel.getId());          // club + actividades
@@ -209,7 +206,7 @@ public class InscripcionFormController extends BaseController implements ViewOnS
                         deudaTotal.toPlainString());
                 lblSocioSel.setStyle("-fx-text-fill: #B00020; -fx-font-weight: bold;"); // rojo
             } else {
-                // No hay deuda → mostrar saldo/0
+
                 texto = String.format("%s  |  Saldo: %s",
                         estado,
                         saldoTotal.toPlainString());
@@ -268,7 +265,7 @@ public class InscripcionFormController extends BaseController implements ViewOnS
                 return;
             }
 
-            // Si hay varios con mismo prefijo → tomar exacto o pedir selección
+            // Si hay varios con mismo prefijo tomar exacto o pedir selección
             Optional<Socio> exacto = hallados.stream()
                     .filter(s -> dni.equalsIgnoreCase(s.getDni()))
                     .findFirst();
@@ -320,7 +317,7 @@ public class InscripcionFormController extends BaseController implements ViewOnS
     }
     @Override
     public void onShow() {
-        // Si vengo desde Detalle de Socio, habrá un socio en el contexto
+        // Si se viene desde Detalle de Socio, habrá un socio en el contexto
         var ctx = SelectionContext.getSocioActual();
 
         if (ctx != null) {

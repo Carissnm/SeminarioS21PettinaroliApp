@@ -229,6 +229,31 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
         }
     }
 
+    private boolean existeDebitoMesInscripcion(Long inscripcionId, YearMonth periodo) {
+        if (inscripcionId == null) return false;
+        final String sql = """
+        SELECT 1
+          FROM movimiento_cuenta
+         WHERE inscripcion_id = ?
+           AND importe < 0
+           AND fecha BETWEEN ? AND ?
+         LIMIT 1
+    """;
+        LocalDate desde = periodo.atDay(1);
+        LocalDate hasta = periodo.atEndOfMonth();
+        try (Connection con = DataSourceFactory.get().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, inscripcionId);
+            ps.setDate(2, Date.valueOf(desde));
+            ps.setDate(3, Date.valueOf(hasta));
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error verificando débitos del mes para la inscripción", e);
+        }
+    }
+
     @Override
     public void generarCargosMensuales(Long socioId, YearMonth periodo) {
         LocalDate fechaCargo = periodo.atEndOfMonth();
@@ -272,17 +297,21 @@ public class MovimientoCuentaDaoImpl implements MovimientoCuentaDao {
             BigDecimal precio = insc.getCuotaMensual();
             if (precio == null || precio.signum() <= 0) continue;
 
+            if (existeDebitoMesInscripcion(insc.getId(), periodo)) {
+                continue;
+            }
+
             String nombre = (insc.getActividadNombre() == null ? "(actividad)" : insc.getActividadNombre());
             String conceptoAct = "Cuota Actividad " + nombre;
 
             if (!existeCargoMensual(socioId, conceptoAct, periodo)) {
                 registrarCargoMensual(
                         socioId,
-                        precio, // positivo -> se guarda NEGATIVO
+                        precio,
                         conceptoAct + " " + String.format("%02d/%d", periodo.getMonthValue(), periodo.getYear()),
                         fechaCargo,
                         "INSCRIPCION_ACTIVIDAD",
-                        insc.getId() // ⬅️ imputado a la inscripción
+                        insc.getId()
                 );
             }
         }

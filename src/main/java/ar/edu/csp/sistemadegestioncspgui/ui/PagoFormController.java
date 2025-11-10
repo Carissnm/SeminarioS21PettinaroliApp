@@ -345,7 +345,7 @@ public class PagoFormController extends BaseController implements ViewOnShow {
                 cuentaDao.registrarPago(socioSel.getId(), importe, desc);
             }
 
-            // 4) Actualizo saldo en memoria y dejo el socio en contexto
+            // 4) Actualiza saaldo en memoria y deja el socio en contexto
             try {
                 var nuevoSaldo = cuentaDao.saldo(socioSel.getId());
                 socioSel.setSaldo(nuevoSaldo);
@@ -354,7 +354,7 @@ public class PagoFormController extends BaseController implements ViewOnShow {
 
             info("Pago registrado correctamente.");
 
-            // 5) Navegar según origen
+            // 5) Navega según origen
             boolean volverADetalle = SelectionContext.getReturnToSocioDetalle();
             SelectionContext.setReturnToSocioDetalle(false); // limpiar flag
 
@@ -410,7 +410,7 @@ public class PagoFormController extends BaseController implements ViewOnShow {
                     }
                 }
 
-                // Importe sugerido = deuda (si no hay, 0)
+
                 txtImporte.setText(deudaClub.toPlainString());
                 txtImporte.setEditable(false);
                 inscripcionIdSel = null; // club no usa inscripción
@@ -439,7 +439,6 @@ public class PagoFormController extends BaseController implements ViewOnShow {
 
                 inscripcionIdSel = inscOpt.get().getId();
 
-                // deuda de esa inscripción: saldo(+crédito/-deuda) -> tomamos magnitud de la deuda
                 var saldoAct = cuentaDao.saldoPorInscripcion(inscripcionIdSel);
                 var deudaAct = saldoAct.signum() < 0 ? saldoAct.negate() : BigDecimal.ZERO;
 
@@ -456,11 +455,11 @@ public class PagoFormController extends BaseController implements ViewOnShow {
                     }
                 }
 
-                // Importe SIEMPRE se pisa con la deuda de la actividad
+
                 txtImporte.setText(deudaAct.toPlainString());
                 txtImporte.setEditable(false);
 
-                // Descripción por defecto coherente
+
                 if (txtDescripcion.getText() == null || txtDescripcion.getText().isBlank()
                         || txtDescripcion.getText().startsWith("Pago actividad:")) {
                     txtDescripcion.setText("Pago actividad: " + a.getNombre());
